@@ -17,7 +17,7 @@
 git clone https://github.com/SUNJOOSOFT/agent-onggijonggi.git
 cd agent-onggijonggi/infra
 cp .env.example .env                           # ① 주소·자격증명은 채워져 있다 — 그대로 둔다
-# ② 모델 연결 — .env 의 LLM_API_KEY 한 줄 (INSTALL.md 2단계)
+# ② 모델 연결 — .env 의 GEMINI_API_KEY 한 줄, 무료 발급 (INSTALL.md 2단계)
 docker compose up -d --build                   # ③ 전체 기동 (첫 빌드 5~15분)
 ```
 
