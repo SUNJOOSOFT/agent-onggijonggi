@@ -1,5 +1,6 @@
 package com.onggijonggi.bff.common;
 
+import com.openai.errors.OpenAIServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,22 @@ public class GlobalExceptionHandler {
 		String code = isNotFound ? "NOT_FOUND" : "REQUEST_ERROR";
 		String message = isNotFound ? "요청한 리소스를 찾을 수 없습니다." : "요청을 처리할 수 없습니다.";
 		return ResponseEntity.status(status).body(ErrorResponse.of(code, message, traceId(exchange)));
+	}
+
+	/**
+	* 게이트웨이(LiteLLM)가 모델 호출을 거절한 경우. 키 미설정·잘못된 키·해당 모델 미제공이 모두
+	* 여기로 오는데 BFF는 셋을 구분할 근거가 없다 — 어떤 키가 채워졌는지 아는 곳이 게이트웨이뿐이라
+	* 화면 목록에는 키 없는 모델도 뜬다. 그래서 원인을 단정하지 않고 코드 하나로 넘기고, 사용자에게
+	* 보일 문구는 CLIENT(lib/api/errors.ts)가 고른다.
+	*
+	* 502를 쓴다 — 401은 CLIENT의 authFetch가 세션 만료로 보고 재로그인을 시도해버린다.
+	*/
+	@ExceptionHandler(OpenAIServiceException.class)
+	public ResponseEntity<ErrorResponse> handleModelUnavailable(OpenAIServiceException ex,
+			ServerWebExchange exchange) {
+		log.error("게이트웨이가 모델 호출을 거절했습니다(traceId={})", traceId(exchange), ex);
+		return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+				.body(ErrorResponse.of("MODEL_UNAVAILABLE", "모델을 호출할 수 없습니다.", traceId(exchange)));
 	}
 
 	/** 예외 상세·스택트레이스는 서버 로그에만 남기고 응답에는 고정 안전 문구만 포함한다. */

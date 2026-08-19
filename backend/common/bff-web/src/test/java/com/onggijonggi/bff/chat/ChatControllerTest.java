@@ -1,5 +1,7 @@
 package com.onggijonggi.bff.chat;
 
+import com.openai.core.http.Headers;
+import com.openai.errors.UnauthorizedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -23,6 +25,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
+import java.util.concurrent.CompletionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,6 +48,9 @@ class ChatControllerTest {
 	/** 이 메시지가 오면 fakeChatModel이 강제로 예외를 발생시킨다(500 핸들러 테스트 전용 트리거). */
 	private static final String TRIGGER_SERVER_ERROR = "TRIGGER_SERVER_ERROR";
 
+	/** 게이트웨이가 모델 호출을 거절한 상황을 흉내 낸다(502 핸들러 테스트 전용 트리거). */
+	private static final String TRIGGER_MODEL_UNAVAILABLE = "TRIGGER_MODEL_UNAVAILABLE";
+
 	/** 실제 LLM 호출 없이 오케스트레이션 경로만 검증하기 위해 ChatModel 빈을 대체한다. */
 	@TestConfiguration
 	static class FakeChatModelConfig {
@@ -66,6 +72,15 @@ class ChatControllerTest {
 							: prompt.getInstructions().get(prompt.getInstructions().size() - 1).getText();
 					if (TRIGGER_SERVER_ERROR.equals(lastMessage)) {
 						return Flux.error(new IllegalStateException("테스트용 강제 예외"));
+					}
+					if (TRIGGER_MODEL_UNAVAILABLE.equals(lastMessage)) {
+						// 키 미설정 모델을 호출했을 때 게이트웨이가 401로 거절하며 SDK가 던지는 예외.
+						// 실물과 같게 CompletionException으로 한 번 감싼다 — SDK가 비동기 호출이라
+						// 실제로 이렇게 싸여 올라오고, 감싸지 않으면 LlmChatStreamService의 언랩을
+						// 건너뛰어 테스트가 헛통과한다.
+						return Flux.error(new CompletionException(UnauthorizedException.builder()
+								.headers(Headers.builder().build())
+								.build()));
 					}
 					return Flux.just(call(prompt));
 				}
@@ -279,6 +294,34 @@ class ChatControllerTest {
 				.expectBody()
 				.jsonPath("$.error.code").isEqualTo("INTERNAL_ERROR")
 				.jsonPath("$.error.message").isEqualTo("서버 오류가 발생했습니다.")
+				.jsonPath("$.error.traceId").isNotEmpty();
+	}
+
+	/**
+	* 키를 채우지 않은 모델도 화면 목록에 뜨므로 사용자가 고를 수 있다 — 그때 게이트웨이가 거절하면
+	* 원인을 노출하지 않고 CLIENT가 안내 문구를 고를 수 있는 전용 코드로 넘긴다. 401이 아니라 502인
+	* 것이 중요하다(401은 CLIENT가 세션 만료로 보고 재로그인을 시도한다).
+	*/
+	@Test
+	void returnsModelUnavailableEnvelopeWhenGatewayRejectsModel() {
+		String requestBody = """
+				{
+				  "sessionId": "11111111-1111-1111-1111-111111111111",
+				  "modelId": "no-key-model",
+				  "messages": [ { "role": "user", "content": "%s" } ]
+				}
+				""".formatted(TRIGGER_MODEL_UNAVAILABLE);
+
+		restTestClient.post()
+				.uri("/api/chat/stream")
+				.contentType(MediaType.APPLICATION_JSON)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwtSupport.signedJwt("testuser", List.of("USER")))
+				.body(requestBody)
+				.exchange()
+				.expectStatus().isEqualTo(HttpStatus.BAD_GATEWAY)
+				.expectBody()
+				.jsonPath("$.error.code").isEqualTo("MODEL_UNAVAILABLE")
+				.jsonPath("$.error.message").isEqualTo("모델을 호출할 수 없습니다.")
 				.jsonPath("$.error.traceId").isNotEmpty();
 	}
 
