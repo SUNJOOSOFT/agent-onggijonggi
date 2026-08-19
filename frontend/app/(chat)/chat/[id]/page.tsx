@@ -6,10 +6,13 @@
 import { cookies } from 'next/headers';
 
 import { Chat } from '@/components/chat';
-import { DEFAULT_MODEL_NAME, models } from '@/lib/ai/models';
-import { fetchSessionMessagesForServer } from '@/lib/api/server-history';
+import { resolveSelectedModelId } from '@/lib/ai/models';
+import {
+  fetchModelsForServer,
+  fetchSessionMessagesForServer,
+} from '@/lib/api/server-history';
 
-/** 쿠키에 저장된 마지막 선택 모델을 복원하고, URL의 세션 id로 Chat을 렌더링한다. */
+/** 게이트웨이의 모델 목록과 쿠키에 저장된 마지막 선택을 복원하고, URL의 세션 id로 Chat을 렌더링한다. */
 export default async function Page({
   params,
 }: {
@@ -19,9 +22,11 @@ export default async function Page({
 
   const cookieStore = await cookies();
   const modelIdFromCookie = cookieStore.get('model-id')?.value;
-  const selectedModelId =
-    models.find((model) => model.id === modelIdFromCookie)?.id ||
-    DEFAULT_MODEL_NAME;
+  const availableModels = await fetchModelsForServer();
+  const selectedModelId = resolveSelectedModelId(
+    availableModels,
+    modelIdFromCookie,
+  );
   const serverMessages = await fetchSessionMessagesForServer(id);
 
   return (
@@ -29,6 +34,7 @@ export default async function Page({
       <Chat
         key={id}
         id={id}
+        availableModels={availableModels}
         selectedModelId={selectedModelId}
         serverMessages={serverMessages ?? []}
       />

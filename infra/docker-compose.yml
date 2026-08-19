@@ -129,9 +129,12 @@ services:
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       LITELLM_SALT_KEY:   ${LITELLM_SALT_KEY}
-      # config.yaml의 api_base·api_key가 os.environ/... 으로 읽는 값.
-      LLM_API_BASE:       ${LLM_API_BASE:-https://api.openai.com/v1}
-      LLM_API_KEY:        ${LLM_API_KEY:-none}
+      # config.yaml의 api_key·api_base가 os.environ/... 으로 읽는 값.
+      # 주석을 푼 모델의 키만 실제로 쓰인다 — 나머지는 빈 값이어도 기동에 지장이 없다.
+      OPENAI_API_KEY:     ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY:     ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY:  ${ANTHROPIC_API_KEY:-}
+      OLLAMA_API_BASE:    ${OLLAMA_API_BASE:-http://host.docker.internal:11434/v1}
       REDIS_HOST:         redis
       REDIS_PORT:         "6379"
       STORE_MODEL_IN_DB:  "False"
@@ -175,7 +178,8 @@ services:
       APP_SECURITY_PUBLIC_ISSUER: ${PUBLIC_KEYCLOAK_URL:-http://localhost:8081}/realms/${KEYCLOAK_REALM:-app-realm}
       SPRING_AI_OPENAI_BASE_URL:            http://litellm:4000
       SPRING_AI_OPENAI_API_KEY:             ${LITELLM_MASTER_KEY}
-      SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:  ${LLM_MODEL:-default}
+      SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:  ${LLM_MODEL:-gemini-3.6-flash}
+      APP_LLM_GATEWAY_URL:                  http://litellm:4000
       APP_CORS_ALLOWED_ORIGINS: ${PUBLIC_FRONTEND_URL:-http://localhost:3010}
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8090/actuator/health"]

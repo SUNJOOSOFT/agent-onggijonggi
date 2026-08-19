@@ -1,18 +1,39 @@
-# 어떤 모델을 쓸지는 여기서 정한다. 엔드포인트 주소와 키는 .env로 주입한다.
-# model_name은 대외 이름(별칭)이라 실제 모델과 달라도 된다 — BFF가 .env의 LLM_MODEL로 이 이름을 부른다.
+# 어떤 모델을 쓸지는 여기서 정한다. 주소는 여기에 적고, 키는 .env에 둔다.
+# model_name은 대외 이름(별칭)이다 — 이 이름이 채팅 화면의 모델 선택 목록에 그대로 뜨고
+# BFF도 이 이름으로 게이트웨이를 부른다. 그러니 사람이 읽을 이름으로 짓는다.
+#
+# 주요 공급자 셋을 열어두었다. **키를 채우지 않은 모델도 목록에는 뜬다** — 어떤 키가 채워졌는지는
+# 이 게이트웨이만 알고 화면·BFF는 모르기 때문이다. 키 없는 모델을 고르면 호출이 거절되고
+# 화면이 키 설정을 안내한다. 안 쓸 공급자는 주석 처리해 목록에서 빼도 된다.
+#
+# **맨 위 항목이 화면의 기본 선택**이다(처음 들어온 사용자가 고르기 전에 보는 모델).
+# 무료 등급이 있는 Gemini를 맨 위에 둔 이유다.
 model_list:
-  - model_name: default
+  # Google Gemini — 무료 등급으로 시작할 수 있다. 키 발급 https://aistudio.google.com/apikey
+  - model_name: gemini-3.6-flash
     litellm_params:
-      # 실제로 호출할 모델. 이 줄을 쓰는 모델에 맞게 바꾼다(.env의 LLM_API_BASE와 짝이다).
-      #   OpenAI → openai/gpt-4o-mini          Gemini → openai/gemini-2.5-flash
-      #   Ollama → openai/gemma3:4b            Claude → anthropic/claude-opus-5
-      # Claude는 OpenAI 호환 주소가 없다 — 이때는 아래 api_base 줄을 지운다.
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  # Anthropic Claude — 키 발급 https://console.anthropic.com/settings/keys
+  - model_name: claude-sonnet-5
+    litellm_params:
+      model: anthropic/claude-sonnet-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # OpenAI — 무료 등급이 없다(크레딧 선결제 필요). 키 발급 https://platform.openai.com/api-keys
+  - model_name: gpt-4o-mini
+    litellm_params:
       model: openai/gpt-4o-mini
-      api_base: os.environ/LLM_API_BASE
-      api_key: os.environ/LLM_API_KEY
-    model_info:
-      description: "LLM_API_BASE가 가리키는 엔드포인트의 모델"
-      max_tokens: 131072
+      api_key: os.environ/OPENAI_API_KEY
+
+  # 내 PC에서 직접 돌리는 모델(Ollama). 키는 없고 주소가 환경마다 달라 .env로 뺐다.
+  # 설치 절차는 INSTALL.md 2단계 B.
+  # - model_name: "gemma3:4b"
+  #   litellm_params:
+  #     model: openai/gemma3:4b
+  #     api_base: os.environ/OLLAMA_API_BASE
+  #     api_key: none
 
 router_settings:
   routing_strategy: simple-shuffle

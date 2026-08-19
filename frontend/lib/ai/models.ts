@@ -1,35 +1,20 @@
 /********************************************************
  파일명 : models.ts
- 설 명 : 모델 선택 드롭다운(model-selector.tsx)에 노출할 모델 목록. 실제 라우팅은 LiteLLM 프록시가
- id/apiIdentifier로 처리하며, 이 목록은 CLIENT UI 표시용 카탈로그다.
+ 설 명 : 모델 선택 관련 공용 로직. 목록 자체는 여기에 두지 않는다 — 어떤 모델을 서빙하는지 아는 곳은
+ 게이트웨이(infra/config/litellm_config.yaml) 하나뿐이라, 화면은 BFF의 GET /api/models로 받아 쓴다.
  *********************************************************/
 
-export interface Model {
-  id: string;
-  label: string;
-  apiIdentifier: string;
-  description: string;
+/**
+ * 쿠키에 남아 있는 마지막 선택을 현재 목록과 대조해 확정한다. 설정에서 빠진 모델이 쿠키에 남아 있으면
+ * 목록의 첫 모델로 되돌린다. 목록이 비어 있으면(게이트웨이 응답 실패) 빈 문자열이라 선택기가 비고,
+ * 전송 시 BFF의 @NotBlank 검증에 걸린다 — 잘못된 모델로 조용히 보내는 것보다 낫다.
+ */
+export function resolveSelectedModelId(
+  availableModels: string[],
+  modelIdFromCookie?: string,
+): string {
+  if (modelIdFromCookie && availableModels.includes(modelIdFromCookie)) {
+    return modelIdFromCookie;
+  }
+  return availableModels[0] ?? '';
 }
-
-export const models: Array<Model> = [
-  {
-    id: 'default',
-    label: '기본 모델',
-    apiIdentifier: 'default',
-    description: 'LiteLLM 게이트웨이에 연결된 모델',
-  },
-  {
-    id: 'gpt-4o-mini',
-    label: 'GPT 4o mini',
-    apiIdentifier: 'gpt-4o-mini',
-    description: 'Small model for fast, lightweight tasks',
-  },
-  {
-    id: 'gpt-4o',
-    label: 'GPT 4o',
-    apiIdentifier: 'gpt-4o',
-    description: 'For complex, multi-step tasks',
-  },
-] as const;
-
-export const DEFAULT_MODEL_NAME: string = 'default';

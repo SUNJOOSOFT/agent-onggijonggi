@@ -5,6 +5,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -25,7 +26,11 @@ public class LlmChatStreamService implements ChatStreamService {
 		this.chatClient = chatClientBuilder.build();
 	}
 
-	/** modelId는 연결 가능한 백엔드가 하나뿐인 현재 구성에서는 라우팅에 쓰지 않는다. */
+	/**
+	 * 화면에서 고른 modelId로 라우팅한다. 이 값은 게이트웨이 model_list의 model_name(별칭)이라
+	 * 게이트웨이가 실제 공급자·모델을 찾아준다. 목록에 없는 이름이면 게이트웨이가 거절한다 —
+	 * 어떤 이름이 유효한지 아는 곳이 게이트웨이 하나뿐이라 BFF는 따로 대조하지 않는다.
+	 */
 	@Override
 	public Flux<String> streamChat(ChatStreamRequest request) {
 		List<Message> messages = request.messages().stream()
@@ -34,6 +39,7 @@ public class LlmChatStreamService implements ChatStreamService {
 
 		return chatClient.prompt()
 				.messages(messages)
+				.options(ChatOptions.builder().model(request.modelId()))
 				.advisors()
 				.stream()
 				.content();

@@ -72,7 +72,7 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
 	}
 
 	/**
-	* - RSA 서명 기반 로컬 테스트(ChatControllerTest.FakeJwtDecoderConfig)에서도 issuer 검증과 달리
+	* - RSA 서명 기반 로컬 테스트(FakeJwtDecoderConfig)에서도 issuer 검증과 달리
 	*   이 검증기를 그대로 재사용하므로 public static으로 노출한다.
 	* - jwt.getAudience()는 aud 클레임이 RFC 7519 §4.1.3상 허용되는 단일 문자열이든 배열이든 항상
 	*   List&lt;String&gt;으로 정규화해준다 — JwtClaimValidator&lt;Collection&lt;String&gt;&gt;의 언체크
@@ -88,7 +88,7 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
 	}
 
 	/**
-	* 인스턴스 상태(jwkSetUri 등) 없이 클레임만으로 동작해, ChatControllerTest.FakeJwtDecoderConfig가
+	* 인스턴스 상태(jwkSetUri 등) 없이 클레임만으로 동작해, FakeJwtDecoderConfig가
 	* 전체 인스턴스를 만들지 않고도 이 로직을 재사용할 수 있도록 public static으로 노출한다.
 	*/
 	@SuppressWarnings("unchecked")

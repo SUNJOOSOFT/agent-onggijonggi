@@ -1,7 +1,5 @@
 package com.onggijonggi.bff.chat;
 
-import com.onggijonggi.bff.security.IdentityProviderService;
-import com.onggijonggi.bff.security.KeycloakIdentityProviderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -13,18 +11,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtValidators;
-import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -40,10 +32,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *               요청 검증 실패 시 에러 봉투 응답을 실제 서버 기동 상태에서 검증한다. 실제 LLM에
  *               붙지 않도록 FakeChatModelConfig로 ChatModel을 고정 응답 가짜 구현으로 교체해,
  *               ChatController → LlmChatStreamService → ChatClient 오케스트레이션 경로는 그대로 태우되
- *               네트워크는 타지 않는다.
+ *               네트워크는 타지 않는다. 02·EDGE 보안 통과에 필요한 JWT 디코더는
+ *               FakeJwtDecoderConfig(공용)로 교체한다.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@Import(FakeJwtDecoderConfig.class)
 class ChatControllerTest {
 
 	private static final String FAKE_REPLY = "(fake) 안녕하세요";
@@ -74,48 +68,6 @@ class ChatControllerTest {
 						return Flux.error(new IllegalStateException("테스트용 강제 예외"));
 					}
 					return Flux.just(call(prompt));
-				}
-			};
-		}
-
-	}
-
-	/**
-	 * 실 Keycloak 없이 로컬 RSA 공개키로 검증하는 디코더로 교체한다(RestTestClient.bindToServer()가
-	 * 실서버 바인딩이라 mockJwt() 등 WebTestClient 모의 서버 전용 mutator를 쓸 수 없기 때문).
-	 * SecurityConfig가 IdentityProviderService를 통해 명시적으로 디코더를 배선하므로
-	 * ReactiveJwtDecoder 빈만으로는 교체되지 않아 IdentityProviderService 전체를 오버라이드한다.
-	 * audience(aud) 검증과 role 매핑은 KeycloakIdentityProviderService의 로직을 그대로 재사용한다.
-	 */
-	@TestConfiguration
-	static class FakeJwtDecoderConfig {
-
-		@Bean
-		@Primary
-		IdentityProviderService fakeIdentityProviderService() {
-			return new IdentityProviderService() {
-
-				@Override
-				public String providerName() {
-					return "fake";
-				}
-
-				@Override
-				public ReactiveJwtDecoder jwtDecoder() {
-					try {
-						NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder
-								.withPublicKey(TestJwtSupport.RSA_KEY.toRSAPublicKey()).build();
-						decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefault(),
-								KeycloakIdentityProviderService.audienceValidator("ogjg-client")));
-						return decoder;
-					} catch (com.nimbusds.jose.JOSEException e) {
-						throw new IllegalStateException("테스트 JWT 디코더 구성 실패", e);
-					}
-				}
-
-				@Override
-				public Converter<Jwt, Flux<GrantedAuthority>> grantedAuthoritiesConverter() {
-					return KeycloakIdentityProviderService.realmRoleGrantedAuthoritiesConverter();
 				}
 			};
 		}

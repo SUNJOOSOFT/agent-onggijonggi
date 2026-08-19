@@ -39,10 +39,12 @@ import { MultimodalInput } from './multimodal-input';
  * 로딩 스피너만 보여주는 게이트. serverMessages는 로컬에 없을 때만 폴백으로 쓰인다. */
 export function Chat({
   id,
+  availableModels,
   selectedModelId,
   serverMessages,
 }: {
   id: string;
+  availableModels: string[];
   selectedModelId: string;
   serverMessages: ChatMsgItem[];
 }) {
@@ -61,6 +63,7 @@ export function Chat({
   return (
     <ChatSession
       id={id}
+      availableModels={availableModels}
       selectedModelId={selectedModelId}
       serverMessages={serverMessages}
     />
@@ -72,10 +75,12 @@ export function Chat({
  * 세션 전환 시 상태가 자연히 초기화된다. */
 function ChatSession({
   id,
+  availableModels,
   selectedModelId,
   serverMessages,
 }: {
   id: string;
+  availableModels: string[];
   selectedModelId: string;
   serverMessages: ChatMsgItem[];
 }) {
@@ -264,7 +269,10 @@ function ChatSession({
 
   return (
     <div className="flex flex-col min-w-0 h-dvh bg-background">
-      <ChatHeader selectedModelId={selectedModelId} />
+      <ChatHeader
+        availableModels={availableModels}
+        selectedModelId={selectedModelId}
+      />
 
       <Messages
         chatId={id}

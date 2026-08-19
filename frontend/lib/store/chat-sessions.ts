@@ -13,8 +13,6 @@ import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { DEFAULT_MODEL_NAME } from '@/lib/ai/models';
-
 /** setSessions 입력 — 서버(GET /api/chat/sessions) 응답 항목 모양(lib/api/server-history.ts와 동일). */
 export interface ServerChatSession {
   id: string;
@@ -153,7 +151,9 @@ export const useChatSessionsStore = create<ChatSessionsState>()(
               return {
                 id: server.id,
                 title: local?.titleCustomized ? local.title : server.title,
-                modelId: local?.modelId ?? DEFAULT_MODEL_NAME,
+                // 서버 응답에는 모델이 없다. 로컬 기록이 없으면 비워둔다 — 이 값은 기록용이고,
+                // 실제 전송에 쓰이는 모델은 화면이 page.tsx에서 받은 selectedModelId다.
+                modelId: local?.modelId ?? '',
                 messages: local?.messages ?? [],
                 createdAt: new Date(server.createdAt).getTime(),
                 failedMessageIds: local?.failedMessageIds ?? [],

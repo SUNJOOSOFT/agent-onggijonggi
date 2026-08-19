@@ -15,7 +15,7 @@ import com.nimbusds.jwt.SignedJWT;
 /**
  * Class Name : TestJwtSupport.java
  * Description : 02·EDGE JWT 검증 테스트용 — 실 Keycloak 없이 로컬 RSA 키쌍으로 서명한 토큰을 만든다.
- *               ChatControllerTest의 FakeJwtDecoderConfig가 RSA_KEY의 공개키로 디코더를
+ *               FakeJwtDecoderConfig가 RSA_KEY의 공개키로 디코더를
  *               구성해 이 토큰들을 검증한다.
  */
 final class TestJwtSupport {

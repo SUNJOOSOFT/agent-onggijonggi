@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 		properties = {"app.ratelimit.per-minute=2", "app.ratelimit.window-seconds=" + RateLimitWebFilterTest.WINDOW_SECONDS})
 @ActiveProfiles("test")
-@Import({ChatControllerTest.FakeChatModelConfig.class, ChatControllerTest.FakeJwtDecoderConfig.class})
+@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class})
 class RateLimitWebFilterTest {
 
 	static final int WINDOW_SECONDS = 2;

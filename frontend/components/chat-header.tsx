@@ -21,8 +21,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 /** 사이드바가 닫혀 있거나 좁은 화면(<768px)일 때만 "New Chat" 버튼을 노출한다
  * (열려 있으면 그 안의 새 대화 버튼과 중복이라 숨김). */
 function PureChatHeader({
+  availableModels,
   selectedModelId,
 }: {
+  availableModels: string[];
   selectedModelId: string;
 }) {
   const router = useRouter();
@@ -54,6 +56,7 @@ function PureChatHeader({
       )}
 
       <ModelSelector
+        availableModels={availableModels}
         selectedModelId={selectedModelId}
         className="order-1 md:order-2"
       />

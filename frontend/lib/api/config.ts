@@ -25,6 +25,7 @@ const SERVER_BFF_BASE_URL = process.env.BFF_INTERNAL_URL ?? BFF_BASE_URL;
 export const serverBffUrl = (path: string): string =>
   `${SERVER_BFF_BASE_URL}${path}`;
 
+export const MODELS_PATH = '/api/models';
 export const CHAT_STREAM_PATH = '/api/chat/stream';
 export const CHAT_CITATIONS_PATH = '/api/chat/citations';
 export const CHAT_SESSIONS_PATH = '/api/chat/sessions';
