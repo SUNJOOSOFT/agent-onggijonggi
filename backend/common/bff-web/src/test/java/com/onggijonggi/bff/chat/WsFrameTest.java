@@ -2,19 +2,21 @@ package com.onggijonggi.bff.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Class Name : WsFrameTest.java
  * Description : WsFrame의 type 태그 다형성 직렬화가 초안 스펙과 맞는지 순수 단위 테스트로
- *               검증한다. Spring 컨텍스트 없이 plain ObjectMapper로 확인한다.
+ *               검증한다. Spring 컨텍스트 없이, 실제 런타임과 동일한 Jackson 3
+ *               ObjectMapper(JsonMapper)로 확인한다.
  */
 class WsFrameTest {
 
-	private final ObjectMapper objectMapper = new ObjectMapper();
+	private final ObjectMapper objectMapper = new JsonMapper();
 
 	@Test
 	void serializesChatTokenWithTypeTag() throws Exception {
