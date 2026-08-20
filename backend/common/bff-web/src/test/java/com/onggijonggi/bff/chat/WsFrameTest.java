@@ -42,19 +42,31 @@ class WsFrameTest {
 	}
 
 	@Test
-	void allFourFrameTypesRoundTripThroughJson() throws Exception {
+	void allFiveFrameTypesRoundTripThroughJson() throws Exception {
 		UUID sessionId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
 		List<WsFrame> frames = List.of(
 				new ChatTokenFrame(sessionId, "delta"),
 				new ChatDoneFrame(sessionId),
 				new PresenceJoinFrame(sessionId, userId),
-				new ChatMessageFrame(sessionId, userId, "content"));
+				new ChatMessageFrame(sessionId, userId, "content"),
+				new ErrorFrame(sessionId, "FORBIDDEN", "권한이 없습니다.", "trace-1"));
 
 		for (WsFrame frame : frames) {
 			String json = objectMapper.writeValueAsString(frame);
 			WsFrame roundTripped = objectMapper.readValue(json, WsFrame.class);
 			assertThat(roundTripped).isEqualTo(frame);
 		}
+	}
+
+	@Test
+	void serializesErrorFrameWithNullSessionId() throws Exception {
+		WsFrame frame = new ErrorFrame(null, "UNAUTHENTICATED", "인증이 필요합니다.", "trace-2");
+
+		String json = objectMapper.writeValueAsString(frame);
+		WsFrame roundTripped = objectMapper.readValue(json, WsFrame.class);
+
+		assertThat(json).contains("\"type\":\"error\"", "\"code\":\"UNAUTHENTICATED\"");
+		assertThat(roundTripped).isEqualTo(frame);
 	}
 }
