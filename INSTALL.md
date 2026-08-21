@@ -175,6 +175,7 @@ docker compose logs keycloak | Select-String "imported"
 | `port is already allocated` | 그 포트를 쓰는 프로그램이 있다. 범인을 찾거나 `docker-compose.yml`의 `ports` 왼쪽 숫자를 바꾼다(바꿨다면 `.env`의 주소도 함께) → 아래 [포트 확인](#포트-확인) |
 | 로그인 버튼을 누르면 **"There is a problem with the server configuration"** | nextjs가 Keycloak에 못 닿는 경우다. `docker compose logs --tail=30 nextjs`에 `Unable to connect`이 보이는지 확인한다. `.env`의 주소를 기동 후에 바꿨다면 [설정 다시 만들기](#로그인-설정-다시-만들기) |
 | 로그인은 되는데 **채팅만 답이 없다** | 모델 연결 문제다. `docker compose logs --tail=50 litellm`을 본다. Ollama라면 십중팔구 `OLLAMA_HOST=0.0.0.0` 누락([INSTALL_models.md](INSTALL_models.md#내-pc의-ollama)) |
+| **업데이트한 뒤부터** 채팅만 답이 없다 | 예전 `.env`를 그대로 쓰고 있어서다. 기본 구성이 읽는 키 이름이 `GEMINI_API_KEY`에서 **`LLM_API_KEY`로 바뀌었다** — `.env`에서 그 값을 `LLM_API_KEY=`로 옮겨 적고 `docker compose up -d`. 모델 목록은 키와 무관하게 뜨므로 화면상으로는 멀쩡해 보인다 |
 | 채팅 요청이 **401/403** | BFF가 토큰을 거부한 것이다. `.env`의 `PUBLIC_KEYCLOAK_URL`을 기동 후에 바꾸지 않았는지 확인한다 — 바꿨다면 [설정 다시 만들기](#로그인-설정-다시-만들기) |
 | `nextjs`가 계속 `starting` | 빌드 인자가 굳은 경우가 있다. `docker compose up -d --build nextjs` |
 | postgres가 `initdb`에서 죽는다 | 오래된 libseccomp 호스트 이슈다. compose에 이미 `seccomp=unconfined` 우회가 들어 있으니, 그래도 죽는다면 도커를 갱신한다 |
