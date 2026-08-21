@@ -14,4 +14,4 @@
 브라우저가 보는 공개 주소와 컨테이너끼리 쓰는 내부 주소는 분리돼 있다 — nextjs는 Keycloak을 `KEYCLOAK_INTERNAL_ISSUER`(`http://keycloak:8080`), BFF를 `BFF_INTERNAL_URL`(`http://bff:8090`)로 부른다. 덕분에 `.env`의 공개 주소를 `localhost`로 둬도 서버 쪽 호출이 깨지지 않는다.
 `caddy-local-root.crt`만 커밋되지 않는다 — caddy 프로필을 켤 때 인증서를 추출해 만든다(브라우저 신뢰 등록용).
 
-전체 스택 기동 절차는 루트 [`INSTALL.md`](../INSTALL.md), 리버스 프록시·HTTPS 구성은 [`INSTALL_r-proxy.md`](../INSTALL_r-proxy.md) 참조.
+전체 스택 기동 절차는 루트 [`INSTALL.md`](../INSTALL.md), 기본 말고 다른 모델 구성은 [`INSTALL_models.md`](../INSTALL_models.md), 리버스 프록시·HTTPS 구성은 [`INSTALL_r-proxy.md`](../INSTALL_r-proxy.md) 참조.

@@ -1,5 +1,5 @@
 # 내 PC에서 직접 돌리는 모델(Ollama)만 여는 프리셋. 키는 필요 없다.
-# 설치 절차는 INSTALL.md 2단계 B.
+# 설치 절차는 INSTALL_models.md의 "내 PC의 Ollama".
 #
 # **이 파일은 프리셋이다.** 구성을 바꾸고 싶으면 파일을 고치지 말고 .env의 LITELLM_CONFIG_FILE로
 # 다른 프리셋을 가리킨다 — 추적 파일을 고치면 다음 git pull이 충돌한다.

@@ -23,13 +23,13 @@ docker compose up -d --build                   # ③ 전체 기동 (첫 빌드 5
 
 → **<http://localhost:3010>** 에서 `appuser` / `appuser` 로 로그인.
 
-⚠️ **모델은 포함돼 있지 않다.** ②에서 OpenAI 호환 엔드포인트 하나를 연결한다. 상용 API 키를 쓰는 길과 로컬 Ollama를 띄우는 길이 갈리니 [INSTALL.md 2단계](INSTALL.md#2-모델-연결)를 본다.
+⚠️ **모델은 포함돼 있지 않다.** ②에서 API 키 하나를 연결한다(Gemini는 무료로 발급된다). Claude·OpenAI를 함께 쓰거나 로컬 Ollama·사내 서버에 붙이려면 [INSTALL_models.md](INSTALL_models.md).
 
 ⚠️ **`.env.example`의 자격증명은 공개된 고정값이다** — 로그인 `appuser`/`appuser`, 관리자 `admin`/`admin`. 바로 띄워보라고 채워둔 값이니, 혼자 시험하는 범위를 넘으면 반드시 바꾼다.
 
 ⚠️ **기본 구성은 HTTPS가 아니고, 도커를 돌린 그 PC에서만 접속된다.** 같은 네트워크의 다른 기기에서도 열려면 `.env`의 주소 네 줄을 이 PC의 IP로 바꾼다 — **최초 기동 전에** 해야 한다. 로그인 설정(realm·client·계정)은 처음 뜰 때 `.env` 값으로 **한 번만** 만들어지기 때문이다.
 
-👉 **[설치 가이드 — INSTALL.md](INSTALL.md)** — 준비물·모델 연결 두 갈래·문제 해결까지 Windows·macOS·Linux 절차를 담았다.
+👉 **[설치 가이드 — INSTALL.md](INSTALL.md)** — 준비물부터 문제 해결까지 Windows·macOS·Linux 절차를 담았다.
 
 **필요한 것**: Docker(Windows·macOS는 Docker Desktop, Linux는 Docker Engine), 메모리 8GB+, 디스크 10GB+, 그리고 **LLM 하나**(상용 API 키 또는 Ollama 같은 OpenAI 호환 엔드포인트).
 
@@ -60,6 +60,7 @@ docker compose up -d --build                   # ③ 전체 기동 (첫 빌드 5
 | 문서 | 언제 보나 |
 |---|---|
 | [INSTALL.md](INSTALL.md) | **처음 띄울 때.** Docker로 전체 스택 셀프 호스팅 (`http://localhost:3010`) |
+| [INSTALL_models.md](INSTALL_models.md) | **기본 말고 다른 모델을 쓸 때.** Claude·OpenAI 함께 쓰기, 로컬 Ollama, 사내 서버(vLLM 등) |
 | [INSTALL_r-proxy.md](INSTALL_r-proxy.md) | **HTTPS가 필요할 때.** caddy를 얹어 `https://app.localhost`로 쓰는 방법 — INSTALL.md에서 달라지는 곳만 |
 | [ROADMAP.md](ROADMAP.md) | **어디까지 되는지 알고 싶을 때.** 지금 버전의 한계와 다음 방향 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | **코드를 고칠 때.** 이슈·브랜치·커밋·PR 절차와, 프론트·BFF를 호스트에서 직접 띄우는 개발 환경 구성 |
