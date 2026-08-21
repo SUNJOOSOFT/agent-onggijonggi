@@ -2,14 +2,14 @@
     local_certs
 }
 
-app.localhost {
+{$CADDY_APP_DOMAIN:app.localhost} {
     reverse_proxy nextjs:3000
 }
 
-api.localhost {
+{$CADDY_API_DOMAIN:api.localhost} {
     reverse_proxy bff:8090
 }
 
-auth.localhost {
+{$CADDY_AUTH_DOMAIN:auth.localhost} {
     reverse_proxy keycloak:8080
 }

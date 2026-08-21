@@ -18,6 +18,11 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+    environment:
+      # Caddyfile이 {$CADDY_*_DOMAIN:...} 자리에서 읽는 값. 비워두면 .localhost 기본 주소를 쓴다.
+      CADDY_APP_DOMAIN:  ${CADDY_APP_DOMAIN:-app.localhost}
+      CADDY_API_DOMAIN:  ${CADDY_API_DOMAIN:-api.localhost}
+      CADDY_AUTH_DOMAIN: ${CADDY_AUTH_DOMAIN:-auth.localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./site:/srv
@@ -121,7 +126,7 @@ services:
     ports:
       - "4000:4000"
     volumes:
-      - ./config/litellm_config.yaml:/app/config.yaml:ro
+      - ${LITELLM_CONFIG_FILE:-./config/litellm_config.yaml}:/app/config.yaml:ro
     # 호스트에서 도는 모델(Ollama 등)에 닿기 위한 이름. Docker Desktop(Windows·macOS)은
     # 기본 제공하지만 리눅스의 도커 엔진에는 없어서 직접 매핑해 준다.
     extra_hosts:

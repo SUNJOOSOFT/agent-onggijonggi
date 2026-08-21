@@ -219,15 +219,16 @@ docker compose up -d --build
 
 ## 주소 이름 바꾸기
 
-`app.localhost` 대신 다른 이름을 쓰려면 **세 곳을 함께** 고친다.
+`app.localhost` 대신 다른 이름을 쓰려면 **두 곳을 함께** 고친다. `Caddyfile`은 건드리지 않는다 —
+주소를 `.env`에서 받도록 돼 있다.
 
 | 어디 | 무엇 |
 |---|---|
-| `infra/Caddyfile` | 주소 3개 |
-| `infra/.env` | `PUBLIC_*` 3줄 + `NEXTAUTH_URL` |
+| `infra/.env` | `CADDY_*_DOMAIN` 3줄 + `PUBLIC_*` 3줄 + `NEXTAUTH_URL` |
 | Keycloak | 이미 만들어진 realm → 위의 "다시 만들기" |
 
-고친 뒤 `docker compose up -d --build nextjs bff` 로 반영한다.
+고친 뒤 `docker compose up -d --build` 로 반영한다. 환경변수는 컨테이너를 다시 만들어야 들어가서
+`docker restart`로는 주소가 바뀌지 않는다.
 
 > ⚠️ `.localhost`로 끝나지 않는 이름을 쓰면 hosts 파일 등록이 따로 필요하다.
 
