@@ -77,6 +77,8 @@ Copy-Item .env.example .env
 
 > ⚠️ **`.env`의 자격증명은 저장소에 공개된 고정값이다.** 로그인 `appuser`/`appuser`, Keycloak 관리자 `admin`/`admin`. 혼자 시험하는 범위를 넘어선다면 반드시 바꾼다.
 
+> 💡 `.env.example`은 **Gemini에 붙는 기본 템플릿**이다. Ollama나 사내 서버를 쓸 거라면 2단계에서 다른 템플릿으로 갈아탄다 — 지금은 그냥 복사하고 넘어가도 된다.
+
 <details>
 <summary>접속 주소가 어떻게 잡혀 있는지 (안 읽어도 된다)</summary>
 
@@ -108,31 +110,63 @@ PUBLIC_KEYCLOAK_URL=http://localhost:8081
 [aistudio.google.com/apikey](https://aistudio.google.com/apikey)에서 키를 발급받아(구글 계정만 있으면 된다) `.env`의 **한 줄만** 채운다.
 
 ```
-GEMINI_API_KEY=
+LLM_API_KEY=
 ```
 
-이걸로 끝이다. `config/litellm_config.yaml`은 손대지 않아도 된다 — Gemini가 이미 목록 맨 위에 있고, 맨 위 항목이 채팅 화면의 기본 선택 모델이다.
+이걸로 끝이다. `config/litellm_config.yaml`은 손대지 않아도 된다 — 이 파일이 **기본 프리셋**이고, Gemini 하나를 연결해 둔 상태다.
+
+> 💡 **다른 구성이 필요하다면 `.env` 템플릿을 갈아탄다.** 네 템플릿은 **여는 모델만 다르고 나머지는 같다** — 채울 곳이 맨 위에 몰려 있다.
+>
+> | 템플릿 | 무엇을 여는가 | 고칠 곳 |
+> |---|---|---|
+> | `.env.example` | **기본** — Gemini 하나 | `LLM_API_KEY` |
+> | `.env.multi.example` | Gemini·Claude·OpenAI 셋 | 공급자별 키 |
+> | `.env.ollama.example` | 내 PC의 Ollama (아래 B) | `LLM_MODEL` |
+> | `.env.vllm.example` | 온프렘 OpenAI 호환 서버 (아래 C) | `VLLM_API_BASE`·`LLM_MODEL` |
+>
+> 각 템플릿은 `LITELLM_CONFIG_FILE`로 짝이 되는 `config/litellm_config*.yaml`을 가리킨다. **저장소의 설정 파일을 고칠 일이 없으므로** 다음 `git pull`이 충돌하지 않는다.
+>
+> ⚠️ 이미 `.env`를 만들어 고친 뒤라면 통째로 덮어쓰지 말고 **LiteLLM 절만 옮겨 적는다** — 자격증명을 직접 정했다면 그 값이 날아간다.
 
 <details>
-<summary><b>Claude · OpenAI를 쓰려면</b></summary>
+<summary><b>Claude · OpenAI도 함께 쓰려면</b></summary>
 
-셋 다 이미 열려 있으니 **해당 키만 채우면 된다.** `.env`에서:
+셋을 한꺼번에 여는 템플릿으로 갈아탄다.
+
+**macOS · Linux**
+
+```bash
+cp .env.multi.example .env
+```
+
+**Windows (PowerShell)**
+
+```powershell
+Copy-Item .env.multi.example .env
+```
+
+그다음 쓸 공급자의 키를 채운다. 셋 다 채울 필요는 없다.
 
 ```
+GEMINI_API_KEY=         # 키 발급 https://aistudio.google.com/apikey
 ANTHROPIC_API_KEY=      # 키 발급 https://console.anthropic.com/settings/keys
 OPENAI_API_KEY=         # 키 발급 https://platform.openai.com/api-keys
 ```
 
+> ⚠️ 기본 템플릿의 `LLM_API_KEY`는 여기서 쓰이지 않는다. Gemini 키를 이미 채웠다면 **`GEMINI_API_KEY`로 옮겨 적는다.**
+
 > **OpenAI는 무료 등급이 없다.** 크레딧을 선결제해야 키가 동작한다.
 
-키를 채운 뒤 채팅 화면의 드롭다운에서 그 모델을 고르면 된다.
+세 모델이 채팅 화면 드롭다운에 뜨고, 거기서 골라 쓴다.
+
+> **키를 안 채운 모델도 드롭다운에는 뜬다.** 어떤 키가 채워졌는지 아는 곳은 게이트웨이뿐이라 화면이 미리 걸러내지 못한다. 그런 모델을 고르고 메시지를 보내면 *"이 모델을 사용할 수 없어요"* 안내가 뜬다. 목록에서 아예 빼려면 프리셋에서 그 항목을 지운다.
 
 </details>
 
 <details>
 <summary><b>다른 모델을 목록에 추가하려면</b></summary>
 
-`config/litellm_config.yaml`의 `model_list`에 항목을 더한다. `model_name`이 화면 드롭다운에 그대로 뜨는 이름이고, `model:`이 LiteLLM에게 알려주는 실제 공급자·모델이다.
+쓰고 있는 프리셋의 `model_list`에 항목을 더한다. `model_name`이 화면 드롭다운에 그대로 뜨는 이름이고, `model:`이 LiteLLM에게 알려주는 실제 공급자·모델이다.
 
 ```yaml
   - model_name: 화면에-보일-이름
@@ -143,9 +177,9 @@ OPENAI_API_KEY=         # 키 발급 https://platform.openai.com/api-keys
 
 새 환경변수를 쓴다면 `docker-compose.yml`의 litellm 서비스에도 그 변수를 전달해야 한다. LiteLLM이 지원하는 공급자 목록은 [docs.litellm.ai/docs/providers](https://docs.litellm.ai/docs/providers) 참조.
 
-</details>
+> 저장소의 프리셋을 직접 고치면 다음 `git pull`이 충돌할 수 있다. 자기 구성을 오래 쓸 거라면 프리셋을 복사해 두고 `.env`의 `LITELLM_CONFIG_FILE`로 그 사본을 가리킨다 — **저장소 밖의 절대경로도 된다.**
 
-> **키를 안 채운 모델도 드롭다운에는 뜬다.** 어떤 키가 채워졌는지 아는 곳은 게이트웨이뿐이라 화면이 미리 걸러내지 못한다. 그런 모델을 고르고 메시지를 보내면 *"이 모델을 사용할 수 없어요"* 안내가 뜬다. 목록에서 아예 빼려면 `litellm_config.yaml`에서 그 항목을 주석 처리한다.
+</details>
 
 ### B. 완전 로컬 — Ollama
 
@@ -228,27 +262,53 @@ Get-NetTCPConnection -LocalPort 11434 -State Listen | Select-Object LocalAddress
 
 **✅ 성공**: 주소가 `0.0.0.0` · `*` · `::` 중 하나로 나온다. `127.0.0.1`이면 환경변수가 적용되지 않은 것이다 — Ollama를 다시 실행하고 확인한다.
 
-`config/litellm_config.yaml`에서 Ollama 항목의 주석을 푼다(파일 맨 아래 model_list 항목).
+Ollama 템플릿으로 갈아탄다. 주소는 기본값 그대로 두면 된다.
 
-```yaml
-  - model_name: "gemma3:4b"
-    litellm_params:
-      model: openai/gemma3:4b
-      api_base: os.environ/OLLAMA_API_BASE
-      api_key: none
+**macOS · Linux**
+
+```bash
+cp .env.ollama.example .env
 ```
 
-`.env`의 `OLLAMA_API_BASE`는 기본값 그대로 두면 된다.
+**Windows (PowerShell)**
 
-```
-OLLAMA_API_BASE=http://host.docker.internal:11434/v1
+```powershell
+Copy-Item .env.ollama.example .env
 ```
 
 컨테이너가 호스트를 찾는 `host.docker.internal`이라는 이름은 compose가 `extra_hosts`로 매핑해 두어 세 OS에서 모두 동작한다.
 
-받은 모델 이름이 `gemma3:4b`가 아니라면 `model_name`·`model:` 두 줄을 그 이름으로 바꾼다.
+받은 모델 이름이 `gemma3:4b`가 아니라면 `.env`의 `LLM_MODEL`과 `config/litellm_config_ollama.yaml`의 `model_name`·`model:` 두 줄을 그 이름으로 바꾼다.
 
-> 이 모델만 쓸 거라면 다른 항목들을 주석 처리해 드롭다운에서 빼도 된다. 맨 위 항목이 화면의 기본 선택이다.
+### C. 사내·온프렘 서버 — vLLM 등 OpenAI 호환
+
+이미 띄워둔 OpenAI 호환 서버(vLLM·TGI·LM Studio 등)에 붙일 때는 vLLM 템플릿을 쓴다.
+
+**macOS · Linux**
+
+```bash
+cp .env.vllm.example .env
+```
+
+**Windows (PowerShell)**
+
+```powershell
+Copy-Item .env.vllm.example .env
+```
+
+`.env`에서 서버 주소를 자기 것으로 바꾼다.
+
+```
+VLLM_API_BASE=http://192.168.0.20:8000/v1
+```
+
+서빙 중인 모델 이름은 서버마다 다르다. 확인한 뒤 `.env`의 `LLM_MODEL`과 `config/litellm_config_vllm.yaml`의 `model_name`·`model:` 두 줄을 그 이름으로 맞춘다.
+
+```bash
+curl http://192.168.0.20:8000/v1/models
+```
+
+> 서버가 API 키를 요구한다면(vLLM의 `--api-key` 등) 프리셋의 `api_key: none`을 `api_key: os.environ/LLM_API_KEY`로 바꾸고 `.env`의 `LLM_API_KEY` 주석을 푼다.
 
 ---
 

@@ -134,12 +134,14 @@ services:
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       LITELLM_SALT_KEY:   ${LITELLM_SALT_KEY}
-      # config.yaml의 api_key·api_base가 os.environ/... 으로 읽는 값.
-      # 주석을 푼 모델의 키만 실제로 쓰인다 — 나머지는 빈 값이어도 기동에 지장이 없다.
-      OPENAI_API_KEY:     ${OPENAI_API_KEY:-}
+      # 프리셋(config/litellm_config*.yaml)이 os.environ/... 으로 읽는 값들의 합집합이다.
+      # 지금 쓰는 프리셋이 읽는 것만 실제로 쓰인다 — 나머지는 빈 값이어도 기동에 지장이 없다.
+      LLM_API_KEY:        ${LLM_API_KEY:-}
       GEMINI_API_KEY:     ${GEMINI_API_KEY:-}
       ANTHROPIC_API_KEY:  ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY:     ${OPENAI_API_KEY:-}
       OLLAMA_API_BASE:    ${OLLAMA_API_BASE:-http://host.docker.internal:11434/v1}
+      VLLM_API_BASE:      ${VLLM_API_BASE:-http://host.docker.internal:8000/v1}
       REDIS_HOST:         redis
       REDIS_PORT:         "6379"
       STORE_MODEL_IN_DB:  "False"

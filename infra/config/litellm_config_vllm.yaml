@@ -1,4 +1,5 @@
-# 어떤 모델을 쓸지는 여기서 정한다. 키는 .env에 둔다.
+# 사내·온프렘에 따로 띄운 OpenAI 호환 서버(vLLM·TGI·LM Studio 등)를 여는 프리셋.
+# 주소가 환경마다 다르므로 .env의 VLLM_API_BASE로 준다.
 #
 # **이 파일은 프리셋이다.** 구성을 바꾸고 싶으면 파일을 고치지 말고 .env의 LITELLM_CONFIG_FILE로
 # 다른 프리셋을 가리킨다 — 추적 파일을 고치면 다음 git pull이 충돌한다.
@@ -11,13 +12,18 @@
 # model_name은 대외 이름(별칭)이다 — 이 이름이 채팅 화면의 모델 선택 목록에 그대로 뜨고
 # BFF도 이 이름으로 게이트웨이를 부른다. 그러니 사람이 읽을 이름으로 짓는다.
 # 목록의 **맨 위 항목이 화면의 기본 선택**이다.
+#
+# 서빙 중인 모델 이름도 환경마다 다르다 — model_name·model 두 줄을 그 이름으로 바꾼다.
+#   확인: curl $VLLM_API_BASE/models
+#
+# 서버가 키를 요구한다면(vLLM의 --api-key 등) api_key를 os.environ/LLM_API_KEY로 바꾸고
+# .env에 그 값을 넣는다.
 model_list:
-  # Google Gemini — 무료 등급이 있어 결제 없이 시작할 수 있다.
-  # 키 발급 https://aistudio.google.com/apikey  →  .env의 LLM_API_KEY
-  - model_name: gemini-3.6-flash
+  - model_name: gemma
     litellm_params:
-      model: gemini/gemini-3.6-flash
-      api_key: os.environ/LLM_API_KEY
+      model: openai/gemma
+      api_base: os.environ/VLLM_API_BASE
+      api_key: none
 
 router_settings:
   routing_strategy: simple-shuffle

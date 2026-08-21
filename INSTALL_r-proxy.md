@@ -222,9 +222,17 @@ docker compose up -d --build
 `app.localhost` 대신 다른 이름을 쓰려면 **두 곳을 함께** 고친다. `Caddyfile`은 건드리지 않는다 —
 주소를 `.env`에서 받도록 돼 있다.
 
+`.env`에 도메인 세 줄을 새로 넣는다(템플릿에는 없다 — 기본값이 `*.localhost`라 적을 게 없었다).
+
+```
+CADDY_APP_DOMAIN=app.example.com
+CADDY_API_DOMAIN=api.example.com
+CADDY_AUTH_DOMAIN=auth.example.com
+```
+
 | 어디 | 무엇 |
 |---|---|
-| `infra/.env` | `CADDY_*_DOMAIN` 3줄 + `PUBLIC_*` 3줄 + `NEXTAUTH_URL` |
+| `infra/.env` | 위 `CADDY_*_DOMAIN` 3줄 + 이미 있는 `PUBLIC_*` 3줄·`NEXTAUTH_URL`을 같은 주소로 |
 | Keycloak | 이미 만들어진 realm → 위의 "다시 만들기" |
 
 고친 뒤 `docker compose up -d --build` 로 반영한다. 환경변수는 컨테이너를 다시 만들어야 들어가서

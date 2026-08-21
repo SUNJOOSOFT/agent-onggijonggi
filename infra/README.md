@@ -2,11 +2,12 @@
 
 서비스 조립/실행 인프라 산출물. (각 서비스 Dockerfile은 해당 서비스 디렉터리가 소유)
 - `docker-compose.yml` — postgres·redis·keycloak·litellm·bff·nextjs 6개 서비스 조립. caddy는 `profiles: [caddy]`라 기본 `up`에 포함되지 않는다. 프로젝트(그룹) 이름은 `name: agent-ogjg`로 고정 — 볼륨·네트워크도 이 접두사를 쓴다(`agent-ogjg_postgres-data` 등)
-- `.env.example` — 환경변수 템플릿. **바로 도는 고정 자격증명이 채워져 있다**(`appuser`/`appuser`, `admin`/`admin`, 토큰 5개) — 공개된 값이니 시험용으로만. 접속 주소까지 채워져 있어 `.env`로 복사하면 그대로 돈다 — 모델 연결(쓰는 공급자의 API 키 한 줄)만 정한다(실제 `.env`는 커밋 금지)
+- `.env.example` — 환경변수 템플릿. **바로 도는 고정 자격증명이 채워져 있다**(`appuser`/`appuser`, `admin`/`admin`, 토큰 5개) — 공개된 값이니 시험용으로만. 접속 주소까지 채워져 있어 `.env`로 복사하면 그대로 돈다 — 채울 곳은 `LLM_API_KEY` 한 줄뿐이고 파일 맨 위에 있다(실제 `.env`는 커밋 금지). **처음 쓰는 사람이 읽는 파일이라 일부러 짧게 유지한다** — 설명을 늘려야 하면 INSTALL.md로 보낸다
+- `.env.multi.example` · `.env.ollama.example` · `.env.vllm.example` — 모델 구성별 템플릿. 네 벌 모두 같은 구조이고 **여는 모델과 채울 곳만 다르다**(공통 꼬리 30줄은 동일) — 공통 부분을 고칠 일이 생기면 네 벌을 함께 고친다. 각각 `LITELLM_CONFIG_FILE`로 짝이 되는 `config/litellm_config*.yaml`을 가리킨다
 - `utils/init-env.ps1`(Windows) · `utils/init-env.sh`(macOS·Linux) — 자격증명을 직접 정하고 싶을 때 쓰는 `.env` 생성 스크립트. **기본 설치 절차에는 쓰이지 않는다** — `.env.example`을 복사하면 그대로 돌기 때문이다. 비밀번호 2개만 입력받고 나머지 5개는 무작위로 채운다(사용자명·URL은 그대로 둔다). 두 스크립트의 결과는 무작위값을 빼면 동일하다
 - `Caddyfile` — 리버스 프록시 라우팅 규칙. caddy 프로필을 쓸 때만 읽힌다
 - `config/init-db.sql` — PostgreSQL 초기화
-- `config/litellm_config.yaml` — LiteLLM 모델 라우팅
+- `config/litellm_config*.yaml` — LiteLLM 모델 라우팅. **프리셋 파일들이다** — 기본은 `litellm_config.yaml`(Gemini 하나)이고, `_multi`(공급자 셋)·`_ollama`·`_vllm`로 갈아끼운다. 고르는 곳은 `.env`의 `LITELLM_CONFIG_FILE`이라 추적 파일을 고칠 일이 없다(저장소 밖 절대경로도 된다)
 - `config/realm-app.json` — Keycloak realm·client·역할·계정 최초 기동 시 자동 임포트
 
 서비스끼리는 compose가 만드는 `app-net`(bridge)으로 통신한다. `proxy-net`(`external: true`)은 **caddy 프로필에만** 걸려 있다 — 다른 compose 스택을 이 caddy 뒤에 붙이기 위한 공용 네트워크라, caddy를 켤 때만 `docker network create proxy-net`이 한 번 필요하다.

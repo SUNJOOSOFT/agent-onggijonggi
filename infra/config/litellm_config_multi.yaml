@@ -1,4 +1,4 @@
-# 어떤 모델을 쓸지는 여기서 정한다. 키는 .env에 둔다.
+# 공급자 셋을 한꺼번에 여는 프리셋. 키는 .env에 둔다.
 #
 # **이 파일은 프리셋이다.** 구성을 바꾸고 싶으면 파일을 고치지 말고 .env의 LITELLM_CONFIG_FILE로
 # 다른 프리셋을 가리킨다 — 추적 파일을 고치면 다음 git pull이 충돌한다.
@@ -11,13 +11,28 @@
 # model_name은 대외 이름(별칭)이다 — 이 이름이 채팅 화면의 모델 선택 목록에 그대로 뜨고
 # BFF도 이 이름으로 게이트웨이를 부른다. 그러니 사람이 읽을 이름으로 짓는다.
 # 목록의 **맨 위 항목이 화면의 기본 선택**이다.
+#
+# **키를 채우지 않은 모델도 목록에는 뜬다** — 어떤 키가 채워졌는지는 이 게이트웨이만 알고
+# 화면·BFF는 모르기 때문이다. 키 없는 모델을 고르면 호출이 거절되고 화면이 키 설정을
+# 안내한다. 안 쓸 공급자는 그 항목을 지우거나 주석 처리해 목록에서 뺀다.
 model_list:
-  # Google Gemini — 무료 등급이 있어 결제 없이 시작할 수 있다.
-  # 키 발급 https://aistudio.google.com/apikey  →  .env의 LLM_API_KEY
+  # Google Gemini — 무료 등급이 있다. 키 발급 https://aistudio.google.com/apikey
   - model_name: gemini-3.6-flash
     litellm_params:
       model: gemini/gemini-3.6-flash
-      api_key: os.environ/LLM_API_KEY
+      api_key: os.environ/GEMINI_API_KEY
+
+  # Anthropic Claude — 키 발급 https://console.anthropic.com/settings/keys
+  - model_name: claude-sonnet-5
+    litellm_params:
+      model: anthropic/claude-sonnet-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # OpenAI — 무료 등급이 없다(크레딧 선결제 필요). 키 발급 https://platform.openai.com/api-keys
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
 
 router_settings:
   routing_strategy: simple-shuffle
