@@ -86,7 +86,8 @@ git checkout -b 42-session-rename upstream/main
 백엔드 테스트는 H2로 돌아 DB나 Keycloak을 띄우지 않아도 된다. `gradlew build`에 테스트가 포함되므로
 따로 `test`를 돌릴 필요는 없다(개별 실행은 [5. BFF](#5-bff) 참고).
 
-프론트엔드는 아직 테스트 하네스가 없다 — 검사는 `bun lint:check`가 전부다.
+프론트엔드는 vitest로 돈다. `bun run test`(1회 실행) 또는 `bun run test:watch`(감시 모드)로 돌리고,
+`bun lint:check`도 함께 통과해야 한다.
 
 ## 커밋
 
