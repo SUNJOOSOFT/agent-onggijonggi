@@ -8,7 +8,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
-import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
@@ -67,7 +66,7 @@ public class SecurityConfig {
 						.anyExchange().denyAll())
 				.oauth2ResourceServer(oauth2 -> oauth2
 						.jwt(jwt -> jwt.jwtDecoder(identityProviderService.jwtDecoder())
-								.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+								.jwtAuthenticationConverter(identityProviderService.jwtAuthenticationConverter()))
 						.authenticationEntryPoint(authenticationEntryPoint))
 				.exceptionHandling(handling -> handling
 						.authenticationEntryPoint(authenticationEntryPoint)
@@ -92,12 +91,6 @@ public class SecurityConfig {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
 		return source;
-	}
-
-	private ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
-		ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
-		converter.setJwtGrantedAuthoritiesConverter(identityProviderService.grantedAuthoritiesConverter());
-		return converter;
 	}
 
 }

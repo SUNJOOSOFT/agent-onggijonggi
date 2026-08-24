@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.util.matcher.PathPatternParserServerWebExchangeMatcher;
 
@@ -43,19 +42,12 @@ public class WsSecurityConfig {
 				.oauth2ResourceServer(oauth2 -> oauth2
 						.bearerTokenConverter(new WsSubProtocolBearerTokenConverter())
 						.jwt(jwt -> jwt.jwtDecoder(identityProviderService.jwtDecoder())
-								.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+								.jwtAuthenticationConverter(identityProviderService.jwtAuthenticationConverter()))
 						.authenticationEntryPoint(authenticationEntryPoint))
 				.exceptionHandling(handling -> handling
 						.authenticationEntryPoint(authenticationEntryPoint)
 						.accessDeniedHandler(accessDeniedHandler))
 				.build();
-	}
-
-	/** SecurityConfig.jwtAuthenticationConverter()는 private이라 재사용 불가 — 동일 조립을 반복한다(#7 스파이크와 같은 패턴). */
-	private ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
-		ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
-		converter.setJwtGrantedAuthoritiesConverter(identityProviderService.grantedAuthoritiesConverter());
-		return converter;
 	}
 
 }

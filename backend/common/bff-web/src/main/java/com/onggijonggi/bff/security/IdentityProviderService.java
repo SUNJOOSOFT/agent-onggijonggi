@@ -4,6 +4,7 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import reactor.core.publisher.Flux;
 
 /**
@@ -21,5 +22,12 @@ public interface IdentityProviderService {
 	ReactiveJwtDecoder jwtDecoder();
 
 	Converter<Jwt, Flux<GrantedAuthority>> grantedAuthoritiesConverter();
+
+	/** grantedAuthoritiesConverter()를 물린 조립을 한 곳에 둬, SecurityConfig·WsSecurityConfig가 각자 반복하지 않게 한다. */
+	default ReactiveJwtAuthenticationConverter jwtAuthenticationConverter() {
+		ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
+		converter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter());
+		return converter;
+	}
 
 }
