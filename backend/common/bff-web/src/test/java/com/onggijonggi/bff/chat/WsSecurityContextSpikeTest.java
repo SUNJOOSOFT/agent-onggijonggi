@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import({ChatControllerTest.FakeChatModelConfig.class, ChatControllerTest.FakeJwtDecoderConfig.class,
+@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class,
 		WsSecurityContextSpikeTest.WsSpikeConfig.class})
 class WsSecurityContextSpikeTest {
 
