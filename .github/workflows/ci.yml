@@ -26,5 +26,55 @@ jobs:
       - name: 설계 불변식 검사
         run: node scripts/validate-invariants.mjs backend/common/bff-web/src/main/resources/db/migration/*.sql
 
-  # TODO: backend — `cd backend/common/bff-web && ./gradlew build` (JDK 17, test 포함)
-  # TODO: frontend — `cd frontend && bun install && bun lint:check`
+  # backend — 컴파일·테스트 실패를 머지 전에 막는다.
+  # 이 잡이 없어서 존재하지 않는 클래스를 참조하는 코드가 그대로 머지됐고(#38),
+  # 테스트 전체가 컴파일되지 않는 상태를 뒤늦게 고쳐야 했다(#43).
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Spring Boot 4 Gradle 플러그인은 JVM 17 이상에서만 로드된다.
+      # build.gradle의 toolchain 설정은 컴파일·테스트용 JDK만 정하므로 이걸 대신하지 못한다 —
+      # 데몬 JVM이 그보다 낮으면 플러그인을 해석하는 단계에서 먼저 죽는다.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      # gradlew가 실행 권한 없이(100644) 커밋돼 있어 체크아웃 직후에는 바로 돌릴 수 없다.
+      # backend/common/bff-web/Dockerfile도 같은 이유로 chmod를 한다.
+      - name: gradlew 실행 권한 부여
+        working-directory: backend/common/bff-web
+        run: chmod +x gradlew
+
+      - name: 빌드·테스트
+        working-directory: backend/common/bff-web
+        run: ./gradlew build --no-daemon
+
+  # frontend — 타입 검사가 본체다.
+  # #38 같은 "존재하지 않는 것을 참조" 부류는 biome 린트가 잡지 못하고 tsc가 잡는다.
+  # 린트는 그다음 순서로 돌린다(형식·규칙 위반은 성격이 다른 문제라 원인 파악이 쉬워진다).
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # package-lock.json은 package.json과 어긋나 있어 npm으로는 설치되지 않는다.
+      # 실제 빌드(frontend/Dockerfile)와 같은 경로인 bun.lock을 쓴다.
+      - name: 의존성 설치
+        working-directory: frontend
+        run: bun install --frozen-lockfile
+
+      - name: 타입 검사
+        working-directory: frontend
+        run: bunx tsc --noEmit
+
+      - name: 린트
+        working-directory: frontend
+        run: bun run lint:check
