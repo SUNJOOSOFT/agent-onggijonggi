@@ -1,5 +1,6 @@
 package com.onggijonggi.bff.chat;
 
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -70,10 +71,13 @@ class CollabWebSocketHandlerTest {
 	void rejectsHandshakeWhenNoSubProtocolOffered() {
 		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient();
 
+		// RuntimeException 하나만 확인하면 포트 오류 등 무관한 실패도 통과해버린다 — 실제로 401
+		// 응답 때문에 핸드셰이크가 거부됐는지까지 확인한다.
 		assertThatThrownBy(() -> client
 				.execute(URI.create("ws://localhost:" + port + "/api/ws"), new HttpHeaders(), session -> Mono.empty())
 				.block(Duration.ofSeconds(5)))
-				.isInstanceOf(RuntimeException.class);
+				.isInstanceOf(WebSocketClientHandshakeException.class)
+				.hasMessageContaining("401");
 	}
 
 }
