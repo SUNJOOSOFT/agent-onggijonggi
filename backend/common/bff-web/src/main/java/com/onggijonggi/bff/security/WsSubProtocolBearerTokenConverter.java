@@ -29,7 +29,9 @@ public class WsSubProtocolBearerTokenConverter implements ServerAuthenticationCo
 		if (offered == null || offered.isEmpty()) {
 			return Mono.empty();
 		}
-		String[] parts = offered.get(0).split(",", 2);
+		// 클라이언트·프록시가 값을 한 줄로 합쳐 보내든(offered.size()==1) 여러 줄로 나눠 보내든
+		// (offered.size()>1) 동일하게 처리한다 — 앞엣것만 읽으면 후자에서 토큰을 놓친다.
+		String[] parts = String.join(",", offered).split(",", 2);
 		if (parts.length != 2 || !PROTOCOL_NAME.equals(parts[0].trim())) {
 			return Mono.empty();
 		}
