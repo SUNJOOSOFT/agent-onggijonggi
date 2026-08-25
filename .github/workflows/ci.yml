@@ -14,9 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Node는 Active LTS를 쓴다. 22(Jod)는 2025-10부터 maintenance라 보안 패치만 나오고
+      # 2027-04에 끝난다 — 24(Krypton)는 2026-10까지 Active LTS, EOL 2028-04다.
+      # frontend 잡도 같은 버전을 쓴다(아래).
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       # 훅은 `--staged`(인덱스)를 읽지만 CI 체크아웃에는 스테이징된 내용이 없다.
       # 그래서 마이그레이션 파일 전체를 인자로 넘긴다.
@@ -71,7 +74,7 @@ jobs:
       # 기대지 않도록 여기서 못을 박는다.
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       # package-lock.json은 package.json과 어긋나 있어 npm으로는 설치되지 않는다.
       # 실제 빌드(frontend/Dockerfile)와 같은 경로인 bun.lock을 쓴다.
