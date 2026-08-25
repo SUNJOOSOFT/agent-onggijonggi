@@ -14,6 +14,7 @@ describe('routeFrame', () => {
       sessionId: 's1',
       delta: '안녕',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'streaming',
     };
     const onChatAnswer = vi.fn();
@@ -65,6 +66,7 @@ describe('routeFrame', () => {
       sessionId: 's1',
       delta: 'x',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'streaming',
     };
     expect(() => routeFrame(frame, {})).not.toThrow();
@@ -76,6 +78,7 @@ describe('routeFrame', () => {
       sessionId: 's1',
       delta: '',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'done',
     };
     const onChatAnswer = vi.fn();

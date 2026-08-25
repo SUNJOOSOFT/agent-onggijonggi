@@ -19,7 +19,7 @@
  *********************************************************/
 
 import type { BffErrorEnvelope } from '@/lib/api/errors';
-import type { Citation } from '@/lib/api/chat';
+import type { CitationsResponse } from '@/lib/api/chat';
 import { routeFrame } from './frame-router';
 import { parseFrameFromText } from './parse-frame';
 import type {
@@ -34,10 +34,13 @@ export type FrameSource = AsyncIterable<string>;
 
 /** 채팅 본문(chat.answer/error)이 아닌, 곁다리로 흘러나오는 프레임을 위한 콜백. 전부
  * 선택적이다 — 지금 chat.tsx가 실제로 쓸 건 onChatCitation 하나뿐이고, 나머지 둘은 협업
- * 채팅방(#13)이 붙을 때 쓰일 자리를 미리 비워둔 것이다. onChatCitation은 ChatAnswerFrame의
- * citations 필드가 비어있지 않을 때만 불린다(패킷마다 채워지지 않을 수 있어서). */
+ * 채팅방(#13)이 붙을 때 쓰일 자리를 미리 비워둔 것이다. onChatCitation은 기존 REST
+ * CitationsResponse와 같은 모양(citations + restrictedResultsOmitted)을 그대로 재사용한다 —
+ * #47에서 chat.tsx의 citationsByMessageId 상태로 옮길 때 변환 없이 바로 쓸 수 있게 하기 위해서다.
+ * citations가 비어 있어도 restrictedResultsOmitted가 true면(전부 걸러진 경우) 불린다 —
+ * "이 패킷에 citation 관련 정보가 있다"는 기준은 둘 중 하나라도 참인지로 판단한다. */
 export interface FrameStreamCallbacks {
-  onChatCitation?: (citations: Citation[]) => void;
+  onChatCitation?: (payload: CitationsResponse) => void;
   onChatMessage?: (frame: ChatMessageFrame) => void;
   onPresenceJoin?: (frame: PresenceJoinFrame) => void;
 }
@@ -118,8 +121,12 @@ export async function frameSourceToResponse(
           routeFrame(frame, {
             onChatAnswer: (f) => {
               if (f.delta) controller.enqueue(encoder.encode(f.delta));
-              if (f.citations.length > 0)
-                callbacks.onChatCitation?.(f.citations);
+              if (f.citations.length > 0 || f.restrictedResultsOmitted) {
+                callbacks.onChatCitation?.({
+                  citations: f.citations,
+                  restrictedResultsOmitted: f.restrictedResultsOmitted,
+                });
+              }
               if (f.status === 'done') controller.close();
             },
             onError: (f) =>

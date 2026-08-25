@@ -25,13 +25,19 @@ export async function* mockFrameSource(
 
 function answerFrame(
   sessionId: string,
-  partial: Partial<Pick<ChatAnswerFrame, 'delta' | 'citations' | 'status'>>,
+  partial: Partial<
+    Pick<
+      ChatAnswerFrame,
+      'delta' | 'citations' | 'restrictedResultsOmitted' | 'status'
+    >
+  >,
 ): ChatAnswerFrame {
   return {
     type: 'chat.answer',
     sessionId,
     delta: partial.delta ?? '',
     citations: partial.citations ?? [],
+    restrictedResultsOmitted: partial.restrictedResultsOmitted ?? false,
     status: partial.status ?? 'streaming',
   };
 }
@@ -44,6 +50,7 @@ export function goldenPathFrames(params?: {
   sessionId?: string;
   tokens?: string[];
   citations?: Citation[];
+  restrictedResultsOmitted?: boolean;
 }): WsFrame[] {
   const sessionId = params?.sessionId ?? 's1';
   const tokens = params?.tokens ?? ['안녕', '하세요'];
@@ -51,7 +58,32 @@ export function goldenPathFrames(params?: {
     { docId: 'd1', title: '문서 제목', snippet: '발췌 내용', score: 0.87 },
   ];
   return [
-    answerFrame(sessionId, { citations, status: 'streaming' }),
+    answerFrame(sessionId, {
+      citations,
+      restrictedResultsOmitted: params?.restrictedResultsOmitted ?? false,
+      status: 'streaming',
+    }),
+    ...tokens.map((delta) =>
+      answerFrame(sessionId, { delta, status: 'streaming' }),
+    ),
+    answerFrame(sessionId, { status: 'done' }),
+  ];
+}
+
+/** 근거가 전부 RBAC로 걸러진 흐름 — citations는 빈 배열이지만 restrictedResultsOmitted는
+ * true다. 이 둘이 서로 독립이라는 걸 보여주는 시나리오(PR #50 리뷰, bsjSunjoo). */
+export function restrictedCitationsFrames(params?: {
+  sessionId?: string;
+  tokens?: string[];
+}): WsFrame[] {
+  const sessionId = params?.sessionId ?? 's1';
+  const tokens = params?.tokens ?? ['안녕', '하세요'];
+  return [
+    answerFrame(sessionId, {
+      citations: [],
+      restrictedResultsOmitted: true,
+      status: 'streaming',
+    }),
     ...tokens.map((delta) =>
       answerFrame(sessionId, { delta, status: 'streaming' }),
     ),

@@ -4,6 +4,7 @@ import {
   errorMidStreamFrames,
   goldenPathFrames,
   mockFrameSource,
+  restrictedCitationsFrames,
   tokensOnlyFrames,
 } from './mock-frame-source';
 
@@ -59,5 +60,14 @@ describe('시나리오 헬퍼', () => {
     expect(
       frames.some((f) => f.type === 'chat.answer' && f.status === 'done'),
     ).toBe(false);
+  });
+
+  it('restrictedCitationsFrames: citations는 빈 배열이지만 restrictedResultsOmitted는 true', () => {
+    const frames = restrictedCitationsFrames({ tokens: ['한'] });
+    const first = frames[0];
+    expect(first.type === 'chat.answer' && first.citations).toEqual([]);
+    expect(first.type === 'chat.answer' && first.restrictedResultsOmitted).toBe(
+      true,
+    );
   });
 });

@@ -8,6 +8,7 @@ describe('parseFrame', () => {
       sessionId: 's1',
       delta: '안녕',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'streaming',
     });
     expect(frame).toEqual({
@@ -15,6 +16,7 @@ describe('parseFrame', () => {
       sessionId: 's1',
       delta: '안녕',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'streaming',
     });
   });
@@ -25,6 +27,7 @@ describe('parseFrame', () => {
       sessionId: 's1',
       delta: '',
       citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
+      restrictedResultsOmitted: false,
       status: 'streaming',
     });
     expect(frame?.type).toBe('chat.answer');
@@ -34,12 +37,29 @@ describe('parseFrame', () => {
     }
   });
 
+  it('citations가 빈 배열이어도 restrictedResultsOmitted가 true일 수 있다(전부 걸러진 경우)', () => {
+    const frame = parseFrame({
+      type: 'chat.answer',
+      sessionId: 's1',
+      delta: '',
+      citations: [],
+      restrictedResultsOmitted: true,
+      status: 'streaming',
+    });
+    expect(frame?.type).toBe('chat.answer');
+    if (frame?.type === 'chat.answer') {
+      expect(frame.citations).toEqual([]);
+      expect(frame.restrictedResultsOmitted).toBe(true);
+    }
+  });
+
   it('chat.answer의 status:"done"을 파싱한다', () => {
     const frame = parseFrame({
       type: 'chat.answer',
       sessionId: 's1',
       delta: '',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'done',
     });
     expect(frame).toEqual({
@@ -47,6 +67,7 @@ describe('parseFrame', () => {
       sessionId: 's1',
       delta: '',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'done',
     });
   });
@@ -58,7 +79,20 @@ describe('parseFrame', () => {
         sessionId: 's1',
         delta: '',
         citations: [],
+        restrictedResultsOmitted: false,
         status: 'finished',
+      }),
+    ).toBeNull();
+  });
+
+  it('restrictedResultsOmitted가 빠지면 null', () => {
+    expect(
+      parseFrame({
+        type: 'chat.answer',
+        sessionId: 's1',
+        delta: '',
+        citations: [],
+        status: 'streaming',
       }),
     ).toBeNull();
   });
@@ -139,6 +173,7 @@ describe('parseFrame', () => {
         sessionId: 's1',
         delta: 123,
         citations: [],
+        restrictedResultsOmitted: false,
         status: 'streaming',
       }),
     ).toBeNull();
@@ -160,13 +195,14 @@ describe('parseFrame', () => {
 describe('parseFrameFromText', () => {
   it('유효한 JSON 문자열을 파싱한다', () => {
     const frame = parseFrameFromText(
-      '{"type":"chat.answer","sessionId":"s1","delta":"","citations":[],"status":"done"}',
+      '{"type":"chat.answer","sessionId":"s1","delta":"","citations":[],"restrictedResultsOmitted":false,"status":"done"}',
     );
     expect(frame).toEqual({
       type: 'chat.answer',
       sessionId: 's1',
       delta: '',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'done',
     });
   });

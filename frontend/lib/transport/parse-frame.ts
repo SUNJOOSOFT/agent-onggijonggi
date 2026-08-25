@@ -24,6 +24,7 @@ const chatAnswerFrameSchema = z.object({
   sessionId: z.string(),
   delta: z.string(),
   citations: z.array(citationSchema),
+  restrictedResultsOmitted: z.boolean(),
   status: z.union([z.literal('streaming'), z.literal('done')]),
 });
 

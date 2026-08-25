@@ -9,6 +9,7 @@ describe('WsFrame 유니온', () => {
       sessionId: 's1',
       delta: 'hi',
       citations: [],
+      restrictedResultsOmitted: false,
       status: 'streaming',
     };
     expect(frame.type).toBe('chat.answer');

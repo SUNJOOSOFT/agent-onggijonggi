@@ -5,6 +5,7 @@ import {
   errorMidStreamFrames,
   goldenPathFrames,
   mockFrameSource,
+  restrictedCitationsFrames,
   tokensOnlyFrames,
 } from './mock-frame-source';
 import type { WsFrame } from './frames';
@@ -19,7 +20,7 @@ describe('frameSourceToResponse — 정상 흐름', () => {
     await expect(response.text()).resolves.toBe('안녕');
   });
 
-  it('citations는 body에 섞이지 않고 콜백으로만 전달된다', async () => {
+  it('citations는 body에 섞이지 않고 콜백으로만(REST CitationsResponse와 같은 모양으로) 전달된다', async () => {
     const frames = goldenPathFrames({
       tokens: ['안', '녕'],
       citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
@@ -32,9 +33,24 @@ describe('frameSourceToResponse — 정상 흐름', () => {
     const text = await response.text();
     expect(text).toBe('안녕');
     expect(text).not.toContain('docId');
-    expect(onChatCitation).toHaveBeenCalledExactlyOnceWith([
-      { docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 },
-    ]);
+    expect(onChatCitation).toHaveBeenCalledExactlyOnceWith({
+      citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
+      restrictedResultsOmitted: false,
+    });
+  });
+
+  it('citations가 빈 배열이어도 restrictedResultsOmitted가 true면 콜백이 불린다(전부 걸러진 경우)', async () => {
+    const frames = restrictedCitationsFrames({ tokens: ['안', '녕'] });
+    const onChatCitation = vi.fn();
+    const response = await frameSourceToResponse(mockFrameSource(frames), {
+      onChatCitation,
+    });
+
+    await expect(response.text()).resolves.toBe('안녕');
+    expect(onChatCitation).toHaveBeenCalledExactlyOnceWith({
+      citations: [],
+      restrictedResultsOmitted: true,
+    });
   });
 
   it('citations가 delta 없이(빈 문자열) 먼저 도착하면, 첫 실제 토큰이 읽히기 전에 이미 콜백이 불려 있다', async () => {
@@ -54,7 +70,7 @@ describe('frameSourceToResponse — 정상 흐름', () => {
     expect(order).toEqual(['citation']);
   });
 
-  it('citation 없이 토큰만 오는 흐름도 정상 동작한다', async () => {
+  it('citation·restriction 둘 다 없이 토큰만 오는 흐름도 정상 동작한다', async () => {
     const frames = tokensOnlyFrames({ tokens: ['x', 'y'] });
     const onChatCitation = vi.fn();
     const response = await frameSourceToResponse(mockFrameSource(frames), {
@@ -131,6 +147,7 @@ describe('frameSourceToResponse — 손상된 프레임', () => {
         sessionId: 's1',
         delta: '안',
         citations: [],
+        restrictedResultsOmitted: false,
         status: 'streaming',
       });
       yield 'this is not json';
@@ -139,6 +156,7 @@ describe('frameSourceToResponse — 손상된 프레임', () => {
         sessionId: 's1',
         delta: '녕',
         citations: [],
+        restrictedResultsOmitted: false,
         status: 'streaming',
       });
       yield JSON.stringify({
@@ -146,6 +164,7 @@ describe('frameSourceToResponse — 손상된 프레임', () => {
         sessionId: 's1',
         delta: '',
         citations: [],
+        restrictedResultsOmitted: false,
         status: 'done',
       });
     }

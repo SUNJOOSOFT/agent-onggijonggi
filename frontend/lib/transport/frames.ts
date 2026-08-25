@@ -20,12 +20,18 @@ import type { Citation } from '@/lib/api/chat';
  * status:'done'인 패킷도 delta·citations를 함께 실어 보낼 수 있는지는 스펙에 명시돼 있지 않다
  * — 그래서 이 어댑터는 status와 무관하게 매 패킷마다 delta·citations를 항상 처리하고,
  * status:'done'만 별도로 "스트림 종료" 신호로 취급한다(frame-stream-fetch.ts 참고).
+ *
+ * restrictedResultsOmitted: 기존 REST CitationsResponse(lib/api/chat.ts)에 있던 필드를 그대로
+ * 옮겼다 — citations-panel.tsx가 true일 때 "일부 문서는 접근 권한이 없어 결과에서
+ * 제외되었습니다" RBAC 안내를 렌더링하는 데 쓴다(PR #50 리뷰, bsjSunjoo). citations가 빈
+ * 배열이어도 이 값이 true일 수 있다(전부 걸러진 경우) — 그래서 두 필드는 서로 독립이다.
  */
 export interface ChatAnswerFrame {
   type: 'chat.answer';
   sessionId: string;
   delta: string;
   citations: Citation[];
+  restrictedResultsOmitted: boolean;
   status: 'streaming' | 'done';
 }
 
