@@ -16,15 +16,15 @@ const citationSchema = z.object({
   score: z.number(),
 });
 
-const chatTokenFrameSchema = z.object({
-  type: z.literal('chat.token'),
+/** 이슈 #10 코멘트에서 확정된 통합 답변 패킷 — chat.token/chat.done/(제안했던)chat.citation을
+ * 흡수한다. citations는 이 패킷에 아무것도 안 실려 있으면 빈 배열로 온다(옵셔널이 아니다 —
+ * 서버가 항상 필드를 채워 보낸다는 게 확정 스펙의 전제). */
+const chatAnswerFrameSchema = z.object({
+  type: z.literal('chat.answer'),
   sessionId: z.string(),
   delta: z.string(),
-});
-
-const chatDoneFrameSchema = z.object({
-  type: z.literal('chat.done'),
-  sessionId: z.string(),
+  citations: z.array(citationSchema),
+  status: z.union([z.literal('streaming'), z.literal('done')]),
 });
 
 const chatMessageFrameSchema = z.object({
@@ -50,23 +50,13 @@ const wsErrorFrameSchema = z.object({
   traceId: z.string(),
 });
 
-/** 제안 스펙 — 백엔드 확정 대기(frames.ts의 ChatCitationFrame 주석 참고). */
-const chatCitationFrameSchema = z.object({
-  type: z.literal('chat.citation'),
-  sessionId: z.string(),
-  citations: z.array(citationSchema),
-  restrictedResultsOmitted: z.boolean(),
-});
-
-/** type 필드로 판별하는 유니온. 알려진 6개 타입 중 하나와 정확히 일치하지 않으면(미지 타입
+/** type 필드로 판별하는 유니온. 알려진 4개 타입 중 하나와 정확히 일치하지 않으면(미지 타입
  * 포함) 파싱이 실패한다 — parseFrame이 그 실패를 null로 흡수한다. */
 const wsFrameSchema = z.discriminatedUnion('type', [
-  chatTokenFrameSchema,
-  chatDoneFrameSchema,
+  chatAnswerFrameSchema,
   chatMessageFrameSchema,
   presenceJoinFrameSchema,
   wsErrorFrameSchema,
-  chatCitationFrameSchema,
 ]);
 
 /** 이미 JSON.parse된 값을 검증한다. 객체가 아니거나, type이 없거나, 알려지지 않은 type이거나,

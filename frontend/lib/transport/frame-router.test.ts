@@ -1,33 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
 import { routeFrame } from './frame-router';
 import type {
-  ChatCitationFrame,
-  ChatDoneFrame,
+  ChatAnswerFrame,
   ChatMessageFrame,
-  ChatTokenFrame,
   PresenceJoinFrame,
   WsErrorFrame,
 } from './frames';
 
 describe('routeFrame', () => {
-  it('chat.token은 onChatToken에게만 원본 payload로 전달된다', () => {
-    const frame: ChatTokenFrame = {
-      type: 'chat.token',
+  it('chat.answer는 onChatAnswer에게만 원본 payload로 전달된다', () => {
+    const frame: ChatAnswerFrame = {
+      type: 'chat.answer',
       sessionId: 's1',
       delta: '안녕',
+      citations: [],
+      status: 'streaming',
     };
-    const onChatToken = vi.fn();
-    const onChatDone = vi.fn();
-    routeFrame(frame, { onChatToken, onChatDone });
-    expect(onChatToken).toHaveBeenCalledExactlyOnceWith(frame);
-    expect(onChatDone).not.toHaveBeenCalled();
-  });
-
-  it('chat.done을 라우팅한다', () => {
-    const frame: ChatDoneFrame = { type: 'chat.done', sessionId: 's1' };
-    const onChatDone = vi.fn();
-    routeFrame(frame, { onChatDone });
-    expect(onChatDone).toHaveBeenCalledExactlyOnceWith(frame);
+    const onChatAnswer = vi.fn();
+    const onError = vi.fn();
+    routeFrame(frame, { onChatAnswer, onError });
+    expect(onChatAnswer).toHaveBeenCalledExactlyOnceWith(frame);
+    expect(onError).not.toHaveBeenCalled();
   });
 
   it('chat.message를 라우팅한다', () => {
@@ -66,35 +59,31 @@ describe('routeFrame', () => {
     expect(onError).toHaveBeenCalledExactlyOnceWith(frame);
   });
 
-  it('chat.citation을 라우팅한다', () => {
-    const frame: ChatCitationFrame = {
-      type: 'chat.citation',
-      sessionId: 's1',
-      citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
-      restrictedResultsOmitted: false,
-    };
-    const onChatCitation = vi.fn();
-    routeFrame(frame, { onChatCitation });
-    expect(onChatCitation).toHaveBeenCalledExactlyOnceWith(frame);
-  });
-
   it('해당 타입 핸들러를 안 넘겨도 예외 없이 조용히 무시한다', () => {
-    const frame: ChatTokenFrame = {
-      type: 'chat.token',
+    const frame: ChatAnswerFrame = {
+      type: 'chat.answer',
       sessionId: 's1',
       delta: 'x',
+      citations: [],
+      status: 'streaming',
     };
     expect(() => routeFrame(frame, {})).not.toThrow();
   });
 
   it('handlers가 여러 타입을 갖고 있어도 해당 프레임의 핸들러만 호출된다', () => {
-    const frame: ChatDoneFrame = { type: 'chat.done', sessionId: 's1' };
-    const onChatToken = vi.fn();
-    const onChatDone = vi.fn();
+    const frame: ChatAnswerFrame = {
+      type: 'chat.answer',
+      sessionId: 's1',
+      delta: '',
+      citations: [],
+      status: 'done',
+    };
+    const onChatAnswer = vi.fn();
+    const onChatMessage = vi.fn();
     const onError = vi.fn();
-    routeFrame(frame, { onChatToken, onChatDone, onError });
-    expect(onChatDone).toHaveBeenCalledOnce();
-    expect(onChatToken).not.toHaveBeenCalled();
+    routeFrame(frame, { onChatAnswer, onChatMessage, onError });
+    expect(onChatAnswer).toHaveBeenCalledOnce();
+    expect(onChatMessage).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
   });
 });

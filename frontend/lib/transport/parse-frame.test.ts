@@ -2,22 +2,65 @@ import { describe, expect, it } from 'vitest';
 import { parseFrame, parseFrameFromText } from './parse-frame';
 
 describe('parseFrame', () => {
-  it('chat.token을 파싱한다', () => {
+  it('chat.answer를 파싱한다 (delta만)', () => {
     const frame = parseFrame({
-      type: 'chat.token',
+      type: 'chat.answer',
       sessionId: 's1',
       delta: '안녕',
+      citations: [],
+      status: 'streaming',
     });
     expect(frame).toEqual({
-      type: 'chat.token',
+      type: 'chat.answer',
       sessionId: 's1',
       delta: '안녕',
+      citations: [],
+      status: 'streaming',
     });
   });
 
-  it('chat.done을 파싱한다', () => {
-    const frame = parseFrame({ type: 'chat.done', sessionId: 's1' });
-    expect(frame).toEqual({ type: 'chat.done', sessionId: 's1' });
+  it('chat.answer를 파싱한다 (citations만, delta 빈 문자열 — 근거를 먼저 보내는 경우)', () => {
+    const frame = parseFrame({
+      type: 'chat.answer',
+      sessionId: 's1',
+      delta: '',
+      citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
+      status: 'streaming',
+    });
+    expect(frame?.type).toBe('chat.answer');
+    if (frame?.type === 'chat.answer') {
+      expect(frame.citations).toHaveLength(1);
+      expect(frame.delta).toBe('');
+    }
+  });
+
+  it('chat.answer의 status:"done"을 파싱한다', () => {
+    const frame = parseFrame({
+      type: 'chat.answer',
+      sessionId: 's1',
+      delta: '',
+      citations: [],
+      status: 'done',
+    });
+    expect(frame).toEqual({
+      type: 'chat.answer',
+      sessionId: 's1',
+      delta: '',
+      citations: [],
+      status: 'done',
+    });
+  });
+
+  it('status가 streaming/done이 아니면 null', () => {
+    expect(
+      parseFrame({
+        type: 'chat.answer',
+        sessionId: 's1',
+        delta: '',
+        citations: [],
+        status: 'finished',
+      }),
+    ).toBeNull();
   });
 
   it('chat.message를 파싱한다', () => {
@@ -79,21 +122,6 @@ describe('parseFrame', () => {
     }
   });
 
-  it('chat.citation을 파싱한다', () => {
-    const frame = parseFrame({
-      type: 'chat.citation',
-      sessionId: 's1',
-      citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
-      restrictedResultsOmitted: false,
-    });
-    expect(frame).toEqual({
-      type: 'chat.citation',
-      sessionId: 's1',
-      citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
-      restrictedResultsOmitted: false,
-    });
-  });
-
   it('알 수 없는 type은 null (미래의 presence.leave 등에 대비)', () => {
     expect(
       parseFrame({ type: 'presence.leave', sessionId: 's1', userId: 'u1' }),
@@ -101,12 +129,18 @@ describe('parseFrame', () => {
   });
 
   it('필드가 빠진 known type은 null', () => {
-    expect(parseFrame({ type: 'chat.token', sessionId: 's1' })).toBeNull();
+    expect(parseFrame({ type: 'chat.answer', sessionId: 's1' })).toBeNull();
   });
 
   it('필드 타입이 안 맞으면 null', () => {
     expect(
-      parseFrame({ type: 'chat.token', sessionId: 's1', delta: 123 }),
+      parseFrame({
+        type: 'chat.answer',
+        sessionId: 's1',
+        delta: 123,
+        citations: [],
+        status: 'streaming',
+      }),
     ).toBeNull();
   });
 
@@ -115,7 +149,7 @@ describe('parseFrame', () => {
     expect(parseFrame(42)).toBeNull();
     expect(parseFrame(null)).toBeNull();
     expect(parseFrame(undefined)).toBeNull();
-    expect(parseFrame(['type', 'chat.token'])).toBeNull();
+    expect(parseFrame(['type', 'chat.answer'])).toBeNull();
   });
 
   it('type 필드 자체가 없으면 null', () => {
@@ -125,12 +159,20 @@ describe('parseFrame', () => {
 
 describe('parseFrameFromText', () => {
   it('유효한 JSON 문자열을 파싱한다', () => {
-    const frame = parseFrameFromText('{"type":"chat.done","sessionId":"s1"}');
-    expect(frame).toEqual({ type: 'chat.done', sessionId: 's1' });
+    const frame = parseFrameFromText(
+      '{"type":"chat.answer","sessionId":"s1","delta":"","citations":[],"status":"done"}',
+    );
+    expect(frame).toEqual({
+      type: 'chat.answer',
+      sessionId: 's1',
+      delta: '',
+      citations: [],
+      status: 'done',
+    });
   });
 
   it('깨진 JSON은 예외를 던지지 않고 null을 반환한다', () => {
-    expect(parseFrameFromText('{"type":"chat.done"')).toBeNull();
+    expect(parseFrameFromText('{"type":"chat.answer"')).toBeNull();
     expect(parseFrameFromText('')).toBeNull();
   });
 

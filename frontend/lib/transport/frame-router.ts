@@ -8,31 +8,24 @@
  *********************************************************/
 
 import type {
-  ChatCitationFrame,
-  ChatDoneFrame,
+  ChatAnswerFrame,
   ChatMessageFrame,
-  ChatTokenFrame,
   PresenceJoinFrame,
   WsErrorFrame,
   WsFrame,
 } from './frames';
 
 export interface FrameHandlers {
-  onChatToken?: (frame: ChatTokenFrame) => void;
-  onChatDone?: (frame: ChatDoneFrame) => void;
+  onChatAnswer?: (frame: ChatAnswerFrame) => void;
   onChatMessage?: (frame: ChatMessageFrame) => void;
   onPresenceJoin?: (frame: PresenceJoinFrame) => void;
   onError?: (frame: WsErrorFrame) => void;
-  onChatCitation?: (frame: ChatCitationFrame) => void;
 }
 
 export function routeFrame(frame: WsFrame, handlers: FrameHandlers): void {
   switch (frame.type) {
-    case 'chat.token':
-      handlers.onChatToken?.(frame);
-      return;
-    case 'chat.done':
-      handlers.onChatDone?.(frame);
+    case 'chat.answer':
+      handlers.onChatAnswer?.(frame);
       return;
     case 'chat.message':
       handlers.onChatMessage?.(frame);
@@ -42,9 +35,6 @@ export function routeFrame(frame: WsFrame, handlers: FrameHandlers): void {
       return;
     case 'error':
       handlers.onError?.(frame);
-      return;
-    case 'chat.citation':
-      handlers.onChatCitation?.(frame);
       return;
     default: {
       // frames.ts에 새 서브타입을 추가하고 여기 case를 안 채우면, frame이 never로 좁혀지지

@@ -28,35 +28,36 @@ describe('mockFrameSource', () => {
     const first = await iterator.next();
     expect(first.done).toBe(false);
     expect(parseFrameFromText(first.value)).toEqual(frames[0]);
-    // 나머지가 아직 안 왔는지까지는 마이크로태스크 큐 특성상 엄격히 보장하기 어려우므로,
-    // "첫 값이 낱개로 온다"는 계약만 확인한다.
   });
 });
 
 describe('시나리오 헬퍼', () => {
-  it('goldenPathFrames: citation이 먼저, 이어서 token들, 마지막에 done', () => {
+  it('goldenPathFrames: citation이 delta 없이 먼저, 이어서 token들, 마지막에 status:done', () => {
     const frames = goldenPathFrames({ tokens: ['한', '글'] });
-    expect(frames.map((f) => f.type)).toEqual([
-      'chat.citation',
-      'chat.token',
-      'chat.token',
-      'chat.done',
-    ]);
+    expect(
+      frames.map((f) => (f.type === 'chat.answer' ? f.status : f.type)),
+    ).toEqual(['streaming', 'streaming', 'streaming', 'done']);
+    const first = frames[0];
+    expect(first.type === 'chat.answer' && first.citations.length > 0).toBe(
+      true,
+    );
+    expect(first.type === 'chat.answer' && first.delta).toBe('');
+    const last = frames.at(-1);
+    expect(last?.type === 'chat.answer' && last.status).toBe('done');
   });
 
-  it('tokensOnlyFrames: citation 프레임이 아예 없다', () => {
+  it('tokensOnlyFrames: 모든 패킷의 citations가 빈 배열이다', () => {
     const frames = tokensOnlyFrames({ tokens: ['한', '글'] });
-    expect(frames.map((f) => f.type)).toEqual([
-      'chat.token',
-      'chat.token',
-      'chat.done',
-    ]);
-    expect(frames.some((f) => f.type === 'chat.citation')).toBe(false);
+    expect(
+      frames.every((f) => f.type === 'chat.answer' && f.citations.length === 0),
+    ).toBe(true);
   });
 
-  it('errorMidStreamFrames: 토큰 일부 후 error로 끝나고 chat.done이 없다', () => {
+  it('errorMidStreamFrames: 토큰 일부 후 error로 끝나고 status:done 패킷이 없다', () => {
     const frames = errorMidStreamFrames({ tokensBeforeError: ['한'] });
-    expect(frames.map((f) => f.type)).toEqual(['chat.token', 'error']);
-    expect(frames.some((f) => f.type === 'chat.done')).toBe(false);
+    expect(frames.map((f) => f.type)).toEqual(['chat.answer', 'error']);
+    expect(
+      frames.some((f) => f.type === 'chat.answer' && f.status === 'done'),
+    ).toBe(false);
   });
 });

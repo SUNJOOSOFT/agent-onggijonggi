@@ -19,7 +19,7 @@ describe('frameSourceToResponse — 정상 흐름', () => {
     await expect(response.text()).resolves.toBe('안녕');
   });
 
-  it('chat.citation은 body에 섞이지 않고 콜백으로만 전달된다', async () => {
+  it('citations는 body에 섞이지 않고 콜백으로만 전달된다', async () => {
     const frames = goldenPathFrames({
       tokens: ['안', '녕'],
       citations: [{ docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 }],
@@ -32,10 +32,12 @@ describe('frameSourceToResponse — 정상 흐름', () => {
     const text = await response.text();
     expect(text).toBe('안녕');
     expect(text).not.toContain('docId');
-    expect(onChatCitation).toHaveBeenCalledExactlyOnceWith(frames[0]);
+    expect(onChatCitation).toHaveBeenCalledExactlyOnceWith([
+      { docId: 'd1', title: '제목', snippet: '발췌', score: 0.9 },
+    ]);
   });
 
-  it('citation이 chat.done을 기다리지 않고 먼저 온다(스트림이 아직 열려 있는 동안 콜백 발화)', async () => {
+  it('citations가 delta 없이(빈 문자열) 먼저 도착하면, 첫 실제 토큰이 읽히기 전에 이미 콜백이 불려 있다', async () => {
     const frames = goldenPathFrames({ tokens: ['a', 'b', 'c'] });
     const order: string[] = [];
     const onChatCitation = vi.fn(() => order.push('citation'));
@@ -45,7 +47,9 @@ describe('frameSourceToResponse — 정상 흐름', () => {
 
     const reader = response.body?.getReader();
     if (!reader) throw new Error('no body');
-    // 첫 청크를 읽기 전에 이미 citation 콜백이 불렸어야 한다 — done을 기다리지 않는다는 게 핵심.
+    // 첫 청크(첫 실제 토큰)가 읽힐 때까지 기다린다 — citation 전용 패킷은 delta가 비어 있어
+    // 그 자체로는 청크를 만들지 않으므로, 이 read()는 그 다음 토큰 패킷까지 기다리게 된다.
+    // 그 사이에 citation 콜백은 이미 불렸어야 한다.
     await reader.read();
     expect(order).toEqual(['citation']);
   });
@@ -123,17 +127,27 @@ describe('frameSourceToResponse — 손상된 프레임', () => {
   it('중간에 파싱 안 되는 문자열이 섞여도 나머지 프레임은 정상 처리된다', async () => {
     async function* sourceWithGarbage() {
       yield JSON.stringify({
-        type: 'chat.token',
+        type: 'chat.answer',
         sessionId: 's1',
         delta: '안',
+        citations: [],
+        status: 'streaming',
       });
       yield 'this is not json';
       yield JSON.stringify({
-        type: 'chat.token',
+        type: 'chat.answer',
         sessionId: 's1',
         delta: '녕',
+        citations: [],
+        status: 'streaming',
       });
-      yield JSON.stringify({ type: 'chat.done', sessionId: 's1' });
+      yield JSON.stringify({
+        type: 'chat.answer',
+        sessionId: 's1',
+        delta: '',
+        citations: [],
+        status: 'done',
+      });
     }
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const response = await frameSourceToResponse(sourceWithGarbage());

@@ -2,7 +2,7 @@
  파일명 : frame-stream-fetch.ts (lib/transport)
  설 명 : 이슈 #10("메시지 통역기") 본체. FrameSource(타입 태그 붙은 JSON 프레임 문자열의
  스트림)를 받아, useChat(streamProtocol:'text')이 그대로 소비할 수 있는 raw text Response로
- 재조립한다. chat.token의 delta만 body에 쓰고, chat.citation은 body를 오염시키지 않도록 별도
+ 재조립한다. chat.answer의 delta만 body에 쓰고, citations는 body를 오염시키지 않도록 별도
  콜백으로 빼낸다 — 이게 완료 기준 2번("병렬 채널 제거, 단일 패킷 통합")의 실제 구현이다.
 
  전송 계층은 아직 없다(#2 결정 대기) — 그래서 이 함수는 소스를 스스로 열지 않고 인자로
@@ -19,10 +19,10 @@
  *********************************************************/
 
 import type { BffErrorEnvelope } from '@/lib/api/errors';
+import type { Citation } from '@/lib/api/chat';
 import { routeFrame } from './frame-router';
 import { parseFrameFromText } from './parse-frame';
 import type {
-  ChatCitationFrame,
   ChatMessageFrame,
   PresenceJoinFrame,
   WsErrorFrame,
@@ -32,11 +32,12 @@ import type {
  * 점만 계약으로 삼는다 — 전송 계층이 뭐든 이 인터페이스만 만족하면 이 파일은 안 바뀐다. */
 export type FrameSource = AsyncIterable<string>;
 
-/** 채팅 본문(chat.token/chat.done/error)이 아닌, 곁다리로 흘러나오는 프레임을 위한 콜백.
- * 전부 선택적이다 — 지금 chat.tsx가 실제로 쓸 건 onChatCitation 하나뿐이고, 나머지 둘은
- * 협업 채팅방(#13)이 붙을 때 쓰일 자리를 미리 비워둔 것이다. */
+/** 채팅 본문(chat.answer/error)이 아닌, 곁다리로 흘러나오는 프레임을 위한 콜백. 전부
+ * 선택적이다 — 지금 chat.tsx가 실제로 쓸 건 onChatCitation 하나뿐이고, 나머지 둘은 협업
+ * 채팅방(#13)이 붙을 때 쓰일 자리를 미리 비워둔 것이다. onChatCitation은 ChatAnswerFrame의
+ * citations 필드가 비어있지 않을 때만 불린다(패킷마다 채워지지 않을 수 있어서). */
 export interface FrameStreamCallbacks {
-  onChatCitation?: (frame: ChatCitationFrame) => void;
+  onChatCitation?: (citations: Citation[]) => void;
   onChatMessage?: (frame: ChatMessageFrame) => void;
   onPresenceJoin?: (frame: PresenceJoinFrame) => void;
 }
@@ -115,22 +116,28 @@ export async function frameSourceToResponse(
           }
 
           routeFrame(frame, {
-            onChatToken: (f) => controller.enqueue(encoder.encode(f.delta)),
-            onChatDone: () => controller.close(),
+            onChatAnswer: (f) => {
+              if (f.delta) controller.enqueue(encoder.encode(f.delta));
+              if (f.citations.length > 0)
+                callbacks.onChatCitation?.(f.citations);
+              if (f.status === 'done') controller.close();
+            },
             onError: (f) =>
               controller.error(
                 new Error(
                   `WS 스트림 오류 (code=${f.code}, traceId=${f.traceId}): ${f.message}`,
                 ),
               ),
-            onChatCitation: (f) => callbacks.onChatCitation?.(f),
             onChatMessage: (f) => callbacks.onChatMessage?.(f),
             onPresenceJoin: (f) => callbacks.onPresenceJoin?.(f),
           });
 
-          if (frame.type === 'chat.done' || frame.type === 'error') return;
+          const isTerminal =
+            (frame.type === 'chat.answer' && frame.status === 'done') ||
+            frame.type === 'error';
+          if (isTerminal) return;
         }
-        // 소스가 chat.done 없이 그냥 끝난 경우(비정상)의 폴백.
+        // 소스가 status:'done' 없이 그냥 끝난 경우(비정상)의 폴백.
         controller.close();
       } catch (err) {
         controller.error(err);

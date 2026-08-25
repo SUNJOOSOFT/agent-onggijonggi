@@ -7,18 +7,26 @@
 
 import type { Citation } from '@/lib/api/chat';
 
-/** 스트리밍 중인 답변의 토큰 조각. 기존 raw text 청크 스트림을 프레임으로 옮긴 형태. */
-export interface ChatTokenFrame {
-  type: 'chat.token';
+/**
+ * 답변 스트리밍 패킷 — chat.token/chat.done/(제안했던)chat.citation 세 개를 흡수한 통합 타입
+ * (이슈 #10 코멘트, bsjSunjoo 확정 스펙). 백엔드가 같은 이름·필드로 별도 이슈에서 구현 예정.
+ *
+ * delta·citations는 패킷마다 필요한 것만 채워서 온다 — 둘 다 비어 있는 패킷도 유효하다(예:
+ * status만 알리는 하트비트성 패킷). citations를 delta보다 먼저(빈 delta + status:'streaming'
+ * 조합으로) 보낼 수 있어, 답변이 다 끝나기 전에 근거 패널이 먼저 채워지는 지금의 UX
+ * (CitationsPanel의 loading 상태)를 유지할 수 있다 — 이게 chat.done에 얹지 않고 별도 필드로
+ * 분리해서 얻은 것이다.
+ *
+ * status:'done'인 패킷도 delta·citations를 함께 실어 보낼 수 있는지는 스펙에 명시돼 있지 않다
+ * — 그래서 이 어댑터는 status와 무관하게 매 패킷마다 delta·citations를 항상 처리하고,
+ * status:'done'만 별도로 "스트림 종료" 신호로 취급한다(frame-stream-fetch.ts 참고).
+ */
+export interface ChatAnswerFrame {
+  type: 'chat.answer';
   sessionId: string;
   delta: string;
-}
-
-/** 답변 스트리밍 종료 신호. 페이로드를 얹지 않는다 — "끝났다" 신호 하나의 책임만 진다
- * (인용정보는 별도 ChatCitationFrame로 분리, 이슈 #10 코멘트 논의 참고). */
-export interface ChatDoneFrame {
-  type: 'chat.done';
-  sessionId: string;
+  citations: Citation[];
+  status: 'streaming' | 'done';
 }
 
 /** 참여자 간 일반 대화 메시지. AI 호출 라우팅 정책은 이슈 #13에서 결정 중. */
@@ -47,29 +55,13 @@ export interface WsErrorFrame {
   traceId: string;
 }
 
-/**
- * 근거 인용 프레임 — 제안 스펙, 백엔드(03·CORE) 확정 대기 중(이슈 #10 코멘트 참고).
- * 지금 서버(WsFrame.java)에는 아직 이 타입이 없다. 스트림 종료(chat.done)를 기다리지 않고
- * 독립적으로 보낼 수 있어야, 답변이 생성되는 도중에도 근거 패널이 먼저 채워지는 지금의 UX
- * (CitationsPanel의 loading 상태)를 유지할 수 있다 — 그래서 chat.done에 얹지 않고 별도
- * 타입으로 분리했다.
- */
-export interface ChatCitationFrame {
-  type: 'chat.citation';
-  sessionId: string;
-  citations: Citation[];
-  restrictedResultsOmitted: boolean;
-}
-
 /** 서버 WsFrame과 대응하는 전체 유니온. 새 타입이 추가되면 여기 한 곳만 넓히면 되고,
  * frame-router.ts의 exhaustive switch가 미처리 케이스를 컴파일 타임에 잡아준다. */
 export type WsFrame =
-  | ChatTokenFrame
-  | ChatDoneFrame
+  | ChatAnswerFrame
   | ChatMessageFrame
   | PresenceJoinFrame
-  | WsErrorFrame
-  | ChatCitationFrame;
+  | WsErrorFrame;
 
 /** WsFrame 서브타입의 type 태그 리터럴만 뽑은 유니온. parse-frame.ts의 태그 검증에 쓴다. */
 export type WsFrameType = WsFrame['type'];

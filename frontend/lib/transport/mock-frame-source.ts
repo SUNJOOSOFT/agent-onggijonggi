@@ -6,7 +6,8 @@
  전체 인터페이스다. 실제 전송 계층이 붙을 때도 이 인터페이스만 만족하면 소비 코드는 안 바뀐다.
  *********************************************************/
 
-import type { WsFrame } from './frames';
+import type { Citation } from '@/lib/api/chat';
+import type { ChatAnswerFrame, WsFrame } from './frames';
 
 /** WsFrame 배열을 JSON 문자열 스트림으로 내보낸다. 반환 타입(AsyncGenerator<string>)은
  * frame-stream-fetch.ts가 선언한 FrameSource(AsyncIterable<string>)에 구조적으로 맞는다 —
@@ -22,19 +23,27 @@ export async function* mockFrameSource(
   }
 }
 
-/** 근거가 먼저 도착하고, 토큰이 이어서 흐르고, 스트림이 끝나는 정상 흐름. citation이 chat.done을
- * 기다리지 않는다는 걸 보여주는 것이 이 시나리오의 핵심 — ChatCitationFrame을 별도 타입으로 둔
- * 이유(이슈 #10 코멘트)를 그대로 재현한다. */
+function answerFrame(
+  sessionId: string,
+  partial: Partial<Pick<ChatAnswerFrame, 'delta' | 'citations' | 'status'>>,
+): ChatAnswerFrame {
+  return {
+    type: 'chat.answer',
+    sessionId,
+    delta: partial.delta ?? '',
+    citations: partial.citations ?? [],
+    status: partial.status ?? 'streaming',
+  };
+}
+
+/** 근거가 먼저(delta 없이) 도착하고, 토큰이 이어서 흐르고, 마지막에 status:'done'으로 끝나는
+ * 정상 흐름. citation이 done을 기다리지 않는다는 걸 보여주는 것이 이 시나리오의 핵심 —
+ * ChatAnswerFrame의 citations를 delta보다 먼저 채워 보낼 수 있게 한 이유(이슈 #10 코멘트,
+ * bsjSunjoo 확정 스펙)를 그대로 재현한다. */
 export function goldenPathFrames(params?: {
   sessionId?: string;
   tokens?: string[];
-  citations?: {
-    docId: string;
-    title: string;
-    snippet: string;
-    score: number;
-  }[];
-  restrictedResultsOmitted?: boolean;
+  citations?: Citation[];
 }): WsFrame[] {
   const sessionId = params?.sessionId ?? 's1';
   const tokens = params?.tokens ?? ['안녕', '하세요'];
@@ -42,20 +51,15 @@ export function goldenPathFrames(params?: {
     { docId: 'd1', title: '문서 제목', snippet: '발췌 내용', score: 0.87 },
   ];
   return [
-    {
-      type: 'chat.citation',
-      sessionId,
-      citations,
-      restrictedResultsOmitted: params?.restrictedResultsOmitted ?? false,
-    },
-    ...tokens.map(
-      (delta): WsFrame => ({ type: 'chat.token', sessionId, delta }),
+    answerFrame(sessionId, { citations, status: 'streaming' }),
+    ...tokens.map((delta) =>
+      answerFrame(sessionId, { delta, status: 'streaming' }),
     ),
-    { type: 'chat.done', sessionId },
+    answerFrame(sessionId, { status: 'done' }),
   ];
 }
 
-/** 근거 없이 답변만 오는 흐름 — RAG가 근거를 못 찾은 경우 등. citation 프레임 자체가 안 온다. */
+/** 근거 없이 답변만 오는 흐름 — RAG가 근거를 못 찾은 경우 등. 모든 패킷의 citations가 빈 배열이다. */
 export function tokensOnlyFrames(params?: {
   sessionId?: string;
   tokens?: string[];
@@ -63,15 +67,15 @@ export function tokensOnlyFrames(params?: {
   const sessionId = params?.sessionId ?? 's1';
   const tokens = params?.tokens ?? ['안녕', '하세요'];
   return [
-    ...tokens.map(
-      (delta): WsFrame => ({ type: 'chat.token', sessionId, delta }),
+    ...tokens.map((delta) =>
+      answerFrame(sessionId, { delta, status: 'streaming' }),
     ),
-    { type: 'chat.done', sessionId },
+    answerFrame(sessionId, { status: 'done' }),
   ];
 }
 
-/** 토큰이 일부 흐르다가 스트림 중간에 error 프레임으로 끊기는 흐름. chat.done 없이 종료된다 —
- * 소비자가 error를 받으면 스트림을 닫아야 한다는 걸 검증하는 시나리오. */
+/** 토큰이 일부 흐르다가 스트림 중간에 error 프레임으로 끊기는 흐름. status:'done' 패킷 없이
+ * 종료된다 — 소비자가 error를 받으면 스트림을 닫아야 한다는 걸 검증하는 시나리오. */
 export function errorMidStreamFrames(params?: {
   sessionId?: string;
   tokensBeforeError?: string[];
@@ -82,8 +86,8 @@ export function errorMidStreamFrames(params?: {
   const sessionId = params?.sessionId ?? 's1';
   const tokensBeforeError = params?.tokensBeforeError ?? ['안녕'];
   return [
-    ...tokensBeforeError.map(
-      (delta): WsFrame => ({ type: 'chat.token', sessionId, delta }),
+    ...tokensBeforeError.map((delta) =>
+      answerFrame(sessionId, { delta, status: 'streaming' }),
     ),
     {
       type: 'error',
