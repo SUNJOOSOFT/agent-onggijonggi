@@ -19,14 +19,38 @@ class WsFrameTest {
 	private final ObjectMapper objectMapper = new JsonMapper();
 
 	@Test
-	void serializesChatTokenWithTypeTag() throws Exception {
+	void serializesChatAnswerWithTypeTag() throws Exception {
 		UUID sessionId = UUID.randomUUID();
-		WsFrame frame = new ChatTokenFrame(sessionId, "안녕");
+		WsFrame frame = new ChatAnswerFrame(sessionId, "안녕", List.of(), false, ChatAnswerStatus.STREAMING);
 
 		String json = objectMapper.writeValueAsString(frame);
 
-		assertThat(json).contains("\"type\":\"chat.token\"", "\"sessionId\":\"" + sessionId + "\"",
-				"\"delta\":\"안녕\"");
+		assertThat(json).contains("\"type\":\"chat.answer\"", "\"sessionId\":\"" + sessionId + "\"",
+				"\"delta\":\"안녕\"", "\"status\":\"streaming\"");
+	}
+
+	@Test
+	void citationOnlyAnswerFrameIsValid() throws Exception {
+		UUID sessionId = UUID.randomUUID();
+		List<Citation> citations = List.of(new Citation("doc-001", "제목", "발췌", 0.91));
+		WsFrame frame = new ChatAnswerFrame(sessionId, "", citations, false, ChatAnswerStatus.STREAMING);
+
+		String json = objectMapper.writeValueAsString(frame);
+		WsFrame roundTripped = objectMapper.readValue(json, WsFrame.class);
+
+		assertThat(roundTripped).isEqualTo(frame);
+	}
+
+	@Test
+	void restrictedResultsOmittedIsIndependentOfEmptyCitations() throws Exception {
+		UUID sessionId = UUID.randomUUID();
+		WsFrame frame = new ChatAnswerFrame(sessionId, "", List.of(), true, ChatAnswerStatus.DONE);
+
+		String json = objectMapper.writeValueAsString(frame);
+		WsFrame roundTripped = objectMapper.readValue(json, WsFrame.class);
+
+		assertThat(json).contains("\"restrictedResultsOmitted\":true");
+		assertThat(roundTripped).isEqualTo(frame);
 	}
 
 	@Test
@@ -42,12 +66,12 @@ class WsFrameTest {
 	}
 
 	@Test
-	void allFiveFrameTypesRoundTripThroughJson() throws Exception {
+	void allFourFrameTypesRoundTripThroughJson() throws Exception {
 		UUID sessionId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
 		List<WsFrame> frames = List.of(
-				new ChatTokenFrame(sessionId, "delta"),
-				new ChatDoneFrame(sessionId),
+				new ChatAnswerFrame(sessionId, "delta",
+						List.of(new Citation("doc-001", "제목", "발췌", 0.91)), false, ChatAnswerStatus.DONE),
 				new PresenceJoinFrame(sessionId, userId),
 				new ChatMessageFrame(sessionId, userId, "content"),
 				new ErrorFrame(sessionId, "FORBIDDEN", "권한이 없습니다.", "trace-1"));
