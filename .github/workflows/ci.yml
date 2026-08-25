@@ -65,6 +65,14 @@ jobs:
         with:
           bun-version: latest
 
+      # vitest는 node 런타임에서 돈다 — `bun run test`는 vitest 바이너리의 node shebang을 보고
+      # 시스템 node에 넘긴다. node가 없으면 bun이 자기 런타임으로 fallback하고, 그때 zod(CJS)
+      # interop이 깨져 `z.object`가 undefined가 된다. runner 이미지에 우연히 있는 node에
+      # 기대지 않도록 여기서 못을 박는다.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       # package-lock.json은 package.json과 어긋나 있어 npm으로는 설치되지 않는다.
       # 실제 빌드(frontend/Dockerfile)와 같은 경로인 bun.lock을 쓴다.
       - name: 의존성 설치
@@ -74,6 +82,12 @@ jobs:
       - name: 타입 검사
         working-directory: frontend
         run: bunx tsc --noEmit
+
+      # 로직 회귀는 tsc도 biome도 잡지 못한다 — vitest가 그 몫이다.
+      # `test` 스크립트는 `vitest run`이라 watch로 매달리지 않는다.
+      - name: 테스트
+        working-directory: frontend
+        run: bun run test
 
       - name: 린트
         working-directory: frontend
