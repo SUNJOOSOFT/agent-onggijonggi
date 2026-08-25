@@ -1,6 +1,6 @@
 # 설치 — 내 PC에서 띄워보기
 
-`docker compose` 한 번으로 6개 컨테이너(프론트·BFF·게이트웨이·인증·DB·캐시)가 뜬다. **모델은 포함돼 있지 않다** — OpenAI 호환 엔드포인트 하나를 각자 연결한다(2단계).
+`docker compose` 한 번으로 5개 컨테이너(프론트·BFF·게이트웨이·인증·DB)가 뜬다. **모델은 포함돼 있지 않다** — OpenAI 호환 엔드포인트 하나를 각자 연결한다(2단계).
 
 작업 시간은 10분 남짓, 여기에 첫 이미지 빌드 5~15분이 더해진다.
 
@@ -129,7 +129,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-**✅ 성공**: 6개 서비스가 모두 `healthy`가 된다. `nextjs`는 `bff` → `keycloak` → `postgres` 순으로 기다렸다 뜨므로 가장 늦다.
+**✅ 성공**: 5개 서비스가 모두 `healthy`가 된다. `nextjs`는 `bff` → `keycloak` → `postgres` 순으로 기다렸다 뜨므로 가장 늦다.
 
 > 메모리가 모자라 빌드가 죽는다면(`Fail extracting tarball` 등) 나눠서 돌린다:
 > `docker compose build bff` → `docker compose build nextjs` → `docker compose up -d`

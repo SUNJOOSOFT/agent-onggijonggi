@@ -20,19 +20,10 @@ model_list:
       api_key: os.environ/LLM_API_KEY
 
 router_settings:
-  routing_strategy: simple-shuffle
-  redis_host: redis
-  redis_port: 6379
   num_retries: 3
   timeout: 300
 
 litellm_settings:
-  cache: true
-  cache_params:
-    type: redis
-    host: redis
-    port: 6379
-    ttl: 3600
   drop_params: true
 
 general_settings:

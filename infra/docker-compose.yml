@@ -56,25 +56,6 @@ services:
     networks:
       - app-net
 
-  redis:
-    image: redis:7-alpine
-    container_name: ogjg-redis
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6379:6379"
-    volumes:
-      - redis-data:/data
-    command: >
-      redis-server --save 60 1 --loglevel warning
-      --maxmemory 4gb --maxmemory-policy allkeys-lru
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app-net
-
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: ogjg-keycloak
@@ -142,8 +123,6 @@ services:
       OPENAI_API_KEY:     ${OPENAI_API_KEY:-}
       OLLAMA_API_BASE:    ${OLLAMA_API_BASE:-http://host.docker.internal:11434/v1}
       VLLM_API_BASE:      ${VLLM_API_BASE:-http://host.docker.internal:8000/v1}
-      REDIS_HOST:         redis
-      REDIS_PORT:         "6379"
       STORE_MODEL_IN_DB:  "False"
       DATABASE_URL:       postgresql://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD}@postgres:5432/litellm
     command:
@@ -163,8 +142,6 @@ services:
       - app-net
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
 
   bff:
@@ -256,8 +233,6 @@ networks:
 
 volumes:
   postgres-data:
-    driver: local
-  redis-data:
     driver: local
   caddy_data:
   caddy_config:

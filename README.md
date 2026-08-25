@@ -5,7 +5,7 @@
 - 🔐 **Keycloak(OIDC) 로그인** + JWT 검증 · 역할 기반 접근 제어 · 분당 요청 제한
 - 💬 **스트리밍 채팅** — 응답이 생성되는 대로 출력, 대화 이력은 DB에 저장
 - 🔀 **모델 교체가 설정 한 줄** — 애플리케이션 코드를 고치지 않는다
-- 🐳 **`docker compose up` 한 번**으로 6개 서비스 전체 기동
+- 🐳 **`docker compose up` 한 번**으로 5개 서비스 전체 기동
 
 > 이 저장소는 **Community Edition**이다. 기능을 더한 Pro 버전이 별도로 있으며, 이 저장소에는 포함되지 않는다.
 
@@ -39,7 +39,7 @@ docker compose up -d --build                   # ③ 전체 기동 (첫 빌드 5
 
 ```
 브라우저 → nextjs(3010) → bff(8090) → litellm(4000) → 사용자가 고른 LLM
-        ↘ keycloak(8081)           ↘ postgres(5442) · redis(6379)
+        ↘ keycloak(8081)           ↘ postgres(5442)
 ```
 
 선택 사항으로 **caddy 리버스 프록시**를 얹으면 `app.localhost`·`api.localhost`·`auth.localhost`를 각각 nextjs·bff·keycloak으로 넘기고 HTTPS를 종단한다. `.localhost`는 RFC 6761 예약 이름이라 브라우저가 알아서 127.0.0.1로 해석한다 — hosts 파일 등록이 필요 없다. caddy 서비스는 compose에서 `profiles: [caddy]`로 묶여 있어 기본 기동에는 포함되지 않는다([INSTALL_r-proxy.md](INSTALL_r-proxy.md)).
@@ -48,7 +48,7 @@ docker compose up -d --build                   # ③ 전체 기동 (첫 빌드 5
 |---|---|---|
 | `frontend/` | 채팅 UI · 로그인 | Next.js(App Router) · React · AI SDK |
 | `backend/common/bff-web/` | API · JWT 검증 · LLM 중계 · 대화 저장 | Spring Boot WebFlux · Spring AI · JPA · Flyway |
-| `infra/` | compose 오케스트레이션 · 게이트웨이 설정 | Docker Compose · LiteLLM · Keycloak · PostgreSQL · Redis |
+| `infra/` | compose 오케스트레이션 · 게이트웨이 설정 | Docker Compose · LiteLLM · Keycloak · PostgreSQL |
 | `worker/` | 문서 처리 워커 | (예약 — 코드 없음) |
 
 프론트엔드는 **BFF만** 호출한다. 게이트웨이와 모델 자격증명은 브라우저에 노출되지 않는다.

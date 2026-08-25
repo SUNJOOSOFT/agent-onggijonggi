@@ -81,7 +81,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-**✅ 성공**: `agent-ogjg-caddy-1`을 포함해 **7줄**이 뜬다. caddy는 헬스체크가 없어 `Up`으로만 표시되고, 나머지 6개는 `Up (healthy)`가 된다.
+**✅ 성공**: `agent-ogjg-caddy-1`을 포함해 **6줄**이 뜬다. caddy는 헬스체크가 없어 `Up`으로만 표시되고, 나머지 5개는 `Up (healthy)`가 된다.
 
 > ⚠️ **caddy가 목록에 없으면** 1단계의 `COMPOSE_PROFILES=caddy`가 빠졌거나 오타다.
 
@@ -167,7 +167,7 @@ INSTALL.md의 [문제 해결](INSTALL.md#문제-해결)이 그대로 유효하�
 | `network proxy-net declared as external, but could not be found` | 2단계의 `docker network create proxy-net` 누락 |
 | **"사이트에 연결할 수 없음"** | 주소 오타이거나 caddy가 안 떠 있다. Chrome·Edge·Firefox가 아니면 `*.localhost`를 해석 못 할 수 있다 |
 | **인증서 경고** | 4단계를 안 했거나 브라우저를 안 껐다 켰다 |
-| **`502 Bad Gateway`** | caddy는 떴는데 뒤쪽이 아직이다. `docker compose ps`로 6개가 `healthy`인지 보고 1~2분 기다린다 |
+| **`502 Bad Gateway`** | caddy는 떴는데 뒤쪽이 아직이다. `docker compose ps`로 5개가 `healthy`인지 보고 1~2분 기다린다 |
 | **로그인 후 오류** | 브라우저 주소가 `localhost:3010`이었을 가능성이 크다. `https://app.localhost`로 다시 접속 |
 | **`port is already allocated` — 80/443** | 아래 참고 |
 
