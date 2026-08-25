@@ -145,6 +145,7 @@ services:
       REDIS_HOST:         redis
       REDIS_PORT:         "6379"
       STORE_MODEL_IN_DB:  "False"
+      DATABASE_URL:       postgresql://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD}@postgres:5432/litellm
     command:
       - "--config"
       - "/app/config.yaml"
@@ -161,6 +162,8 @@ services:
     networks:
       - app-net
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
