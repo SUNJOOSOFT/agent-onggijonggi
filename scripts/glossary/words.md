@@ -40,12 +40,10 @@
 | `embedding` | 임베딩 |
 | `error` | 오류 |
 | `file` | 파일 |
-| `inactive` | 비활성 |
 | `indexed` | 색인됨 |
 | `indexing` | 색인 실행 |
 | `json` | JSON |
 | `key` | 키 |
-| `kind` | 종류 |
 | `last` | 마지막 |
 | `location` | 위치 |
 | `log` | 로그 |
@@ -54,10 +52,8 @@
 | `model` | 모델 |
 | `name` | 이름 |
 | `next` | 다음 |
-| `node` | 노드 |
 | `original` | 원본 |
 | `outcome` | 결과 |
-| `parent` | 부모 |
 | `path` | 경로 |
 | `pending` | 대기 중 |
 | `question` | 질문 |
@@ -68,7 +64,6 @@
 | `source` | 근거 |
 | `subject` | 주체 식별자 |
 | `tag` | 태그 |
-| `tenant` | 고객사 경계 |
 | `text` | 텍스트 |
 | `title` | 제목 |
 | `trace` | 추적 |
@@ -76,7 +71,6 @@
 | `uploaded` | 업로드됨 |
 | `user` | 사용자 |
 | `version` | 버전 |
-| `workspace` | 작업 공간 |
 
 ## 예외
 
@@ -110,7 +104,6 @@
 | `fingerprint` | `fgpt` | 관용어 — 알고리즘 결과 `fng`가 의미 불명확, 4자로 늘려 가독성 확보 |
 | `deleted` | `deleted` | 관용 유지 — `deleted_at`/`deleted_by` 대칭, 기존 `created`/`updated`/`indexed`/`uploaded`와 동일 패턴 |
 | `sequence` | `seq` | 관용어 — 알고리즘 결과 `sqn`이 불명확, 업계 통용 축약 |
-| `inactive` | `inactive` | 관용 유지 — `created_at`/`deleted_at`과 `_at` 대칭. 알고리즘 결과 `inc`는 increment로 읽힌다 |
 
 ### 복수형 정책
 

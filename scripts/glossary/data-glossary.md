@@ -30,13 +30,11 @@ DB 테이블·컬럼과 ES 필드 이름은 **snake_case**로 쓰고, `_`로 분
 | `file` | `file` | 파일 | 알고리즘 | - |
 | `fgpt` | `fingerprint` | - | 예외 | 관용어 — 알고리즘 결과 `fng`가 의미 불명확, 4자로 늘려 가독성 확보 |
 | `id` | `identifier` | - | 예외 | 관용어(팀 합의) |
-| `inactive` | `inactive` | 비활성 | 예외 | 관용 유지 — `created_at`/`deleted_at`과 `_at` 대칭. 알고리즘 결과 `inc`는 increment로 읽힌다 |
 | `indexed` | `indexed` | 색인됨 | 예외 | 관용 — `indexed_at` 대칭 |
 | `idx` | `indexing` | 색인 실행 | 예외 | 관용어 — 알고리즘은 `ind`로 `indexed`와 충돌 |
 | `json` | `json` | JSON | 알고리즘 | - |
 | `key` | `key` | 키 | 알고리즘 | - |
 | `keycloak` | `keycloak` | - | 예외 | 고유명사 — 축약하지 않음 |
-| `kind` | `kind` | 종류 | 알고리즘 | - |
 | `last` | `last` | 마지막 | 알고리즘 | - |
 | `loc` | `location` | 위치 | 예외 | 관용어 — 알고리즘은 `lct` |
 | `log` | `log` | 로그 | 알고리즘 | - |
@@ -45,10 +43,8 @@ DB 테이블·컬럼과 ES 필드 이름은 **snake_case**로 쓰고, `_`로 분
 | `mdl` | `model` | 모델 | 알고리즘 | - |
 | `name` | `name` | 이름 | 알고리즘 | - |
 | `next` | `next` | 다음 | 알고리즘 | - |
-| `node` | `node` | 노드 | 알고리즘 | - |
 | `org` | `original` | 원본 | 알고리즘 | - |
 | `otc` | `outcome` | 결과 | 알고리즘 | - |
-| `prn` | `parent` | 부모 | 알고리즘 | - |
 | `pw` | `password` | - | 예외 | 관용어(팀 합의) |
 | `path` | `path` | 경로 | 알고리즘 | - |
 | `pnd` | `pending` | 대기 중 | 알고리즘 | - |
@@ -62,7 +58,6 @@ DB 테이블·컬럼과 ES 필드 이름은 **snake_case**로 쓰고, `_`로 분
 | `status` | `status` | - | 예외 | 관용 유지 — 알고리즘 결과 `stt`가 부자연스러움(`content`·`title`과 같은 패턴) |
 | `subj` | `subject` | 주체 식별자 | 예외 | 관용어 — 알고리즘은 `sbj` |
 | `tag` | `tag` | 태그 | 알고리즘 | - |
-| `tnn` | `tenant` | 고객사 경계 | 알고리즘 | - |
 | `text` | `text` | 텍스트 | 알고리즘 | - |
 | `title` | `title` | 제목 | 예외 | 알고리즘 `ttl`은 Time-To-Live로 통용돼 혼동 |
 | `trc` | `trace` | 추적 | 알고리즘 | - |
@@ -70,4 +65,3 @@ DB 테이블·컬럼과 ES 필드 이름은 **snake_case**로 쓰고, `_`로 분
 | `uploaded` | `uploaded` | 업로드됨 | 예외 | 관용 — `uploaded_by` 대칭 |
 | `user` | `user` | 사용자 | 알고리즘 | - |
 | `ver` | `version` | 버전 | 예외 | 관용어 — 알고리즘은 `vrs` |
-| `wrk` | `workspace` | 작업 공간 | 알고리즘 | - |
