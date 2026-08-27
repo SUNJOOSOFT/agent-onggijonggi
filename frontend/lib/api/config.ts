@@ -30,6 +30,19 @@ export const CHAT_STREAM_PATH = '/api/chat/stream';
 export const CHAT_CITATIONS_PATH = '/api/chat/citations';
 export const CHAT_SESSIONS_PATH = '/api/chat/sessions';
 
+/** 협업채팅 WS 핸드셰이크 경로 — 서버 WsHandlerMappingConfig의 매핑과 같아야 한다(이슈 #3). */
+export const WS_PATH = '/api/ws';
+
+/**
+ * WS 핸드셰이크용 절대 URL. WebSocket 생성자는 http(s)를 받지 않으므로 스킴을 ws(s)로 바꾼다.
+ * BFF_BASE_URL이 비어 있으면(목업 모드) 동일 오리진이라 브라우저의 현재 오리진을 쓴다 —
+ * 이 함수는 클라이언트 전용이다(서버 컴포넌트에는 WS를 열 이유가 없다).
+ */
+export const bffWsUrl = (path: string): string => {
+  const base = BFF_BASE_URL || window.location.origin;
+  return `${base}${path}`.replace(/^http/, 'ws');
+};
+
 /** 세션별 대화 이력 조회 경로. */
 export const chatSessionMessagesPath = (sessionId: string): string =>
   `${CHAT_SESSIONS_PATH}/${sessionId}/messages`;
