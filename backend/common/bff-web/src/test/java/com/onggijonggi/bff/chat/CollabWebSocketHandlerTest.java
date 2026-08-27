@@ -35,6 +35,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class})
 class CollabWebSocketHandlerTest {
 
+	/** app.cors.allowed-origins에 들어 있는 값 — Origin 검사(이슈 #5)를 통과시키기 위한 것이고,
+	 * 이 테스트의 관심사는 어디까지나 서브프로토콜 인증이다. */
+	private static final String ALLOWED_ORIGIN = "http://localhost:3000";
+
 	@LocalServerPort
 	private int port;
 
@@ -46,11 +50,16 @@ class CollabWebSocketHandlerTest {
 		AtomicReference<String> received = new AtomicReference<>();
 		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient();
 
+		// 이슈 #5 이후 WsOriginWebFilter가 Origin을 검사한다. 넘기지 않으면 Netty가 ws://localhost:<랜덤포트>
+		// 기준으로 Origin을 스스로 만들어 붙이고, 그 값은 화이트리스트에 없어 403으로 끊긴다.
+		HttpHeaders headers = new HttpHeaders();
+		headers.setOrigin(ALLOWED_ORIGIN);
+
 		// ReactorNettyWebSocketClient는 Sec-WebSocket-Protocol 요청 헤더를 handler.getSubProtocols()로
 		// 직접 구성한다 — HttpHeaders로 수동으로 실은 값은 무시되고 덮어써진다(디버그 로그로 실측 확인).
 		// 그래서 실제 브라우저가 new WebSocket(url, ["access_token", token])으로 보내는 것과 동등하게,
 		// 여기서도 두 값을 getSubProtocols()에 순서대로 담아야 한다.
-		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), new HttpHeaders(), new WebSocketHandler() {
+		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), headers, new WebSocketHandler() {
 
 					@Override
 					public List<String> getSubProtocols() {
@@ -82,7 +91,11 @@ class CollabWebSocketHandlerTest {
 		// 꼬일 수 있다 — 이 테스트만 풀 없이 매번 새 커넥션을 맺는다.
 		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient(HttpClient.create(ConnectionProvider.newConnection()));
 
-		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), new HttpHeaders(), new WebSocketHandler() {
+		// 빈 HttpHeaders를 넘기면 Netty가 Origin을 스스로 만들어 붙여 403으로 끊긴다(위 테스트 주석 참고).
+		HttpHeaders headers = new HttpHeaders();
+		headers.setOrigin(ALLOWED_ORIGIN);
+
+		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), headers, new WebSocketHandler() {
 
 					@Override
 					public List<String> getSubProtocols() {
@@ -113,7 +126,11 @@ class CollabWebSocketHandlerTest {
 		AtomicReference<CloseStatus> closeStatus = new AtomicReference<>();
 		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient(HttpClient.create(ConnectionProvider.newConnection()));
 
-		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), new HttpHeaders(), new WebSocketHandler() {
+		// 빈 HttpHeaders를 넘기면 Netty가 Origin을 스스로 만들어 붙여 403으로 끊긴다(위 테스트 주석 참고).
+		HttpHeaders headers = new HttpHeaders();
+		headers.setOrigin(ALLOWED_ORIGIN);
+
+		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), headers, new WebSocketHandler() {
 
 					@Override
 					public List<String> getSubProtocols() {
@@ -140,10 +157,13 @@ class CollabWebSocketHandlerTest {
 	void rejectsHandshakeWhenNoSubProtocolOffered() {
 		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient();
 
+		HttpHeaders headers = new HttpHeaders();
+		headers.setOrigin(ALLOWED_ORIGIN);
+
 		// RuntimeException 하나만 확인하면 포트 오류 등 무관한 실패도 통과해버린다 — 실제로 401
 		// 응답 때문에 핸드셰이크가 거부됐는지까지 확인한다.
 		assertThatThrownBy(() -> client
-				.execute(URI.create("ws://localhost:" + port + "/api/ws"), new HttpHeaders(), session -> Mono.empty())
+				.execute(URI.create("ws://localhost:" + port + "/api/ws"), headers, session -> Mono.empty())
 				.block(Duration.ofSeconds(5)))
 				.isInstanceOf(WebSocketClientHandshakeException.class)
 				.hasMessageContaining("401");
