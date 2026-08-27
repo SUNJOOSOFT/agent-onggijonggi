@@ -147,7 +147,7 @@ PR을 열면 마이그레이션 SQL 검사가 자동으로 돈다. 나머지 항
 ## 준비물
 
 - **JDK 17** — `build.gradle` 툴체인이 17로 고정돼 있다. **`JAVA_HOME`이 17을 가리키는지 확인한다** (`java -version`) — 옛 JDK가 잡혀 있으면 gradle wrapper가 배포본을 내려받는 단계에서 인증서 오류로 먼저 막힌다
-- **Bun** — https://bun.sh
+- **Bun** — https://bun.sh · 프론트엔드는 **npm·yarn 대신 반드시 bun을 쓴다** — 다른 도구로 설치하면 `package-lock.json` 같은 lock file이 생겨 `bun.lock`과 어긋난다
 - **Docker**
 - **OpenAI 호환 LLM 엔드포인트** — [Ollama](https://ollama.com) 또는 상용 API 키
 
