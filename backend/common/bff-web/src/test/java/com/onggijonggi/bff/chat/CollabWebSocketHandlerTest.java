@@ -75,7 +75,7 @@ class CollabWebSocketHandlerTest {
 	@Test
 	void closesConnectionWithCode4000WhenTokenExpiresWhileConnected() {
 		String subject = "token-expiry-user";
-		String token = TestJwtSupport.signedJwtExpiringAt(subject, List.of("USER"), Instant.now().plusMillis(800));
+		String token = TestJwtSupport.signedJwtExpiringAt(subject, List.of("USER"), Instant.now().plusSeconds(2));
 
 		AtomicReference<CloseStatus> closeStatus = new AtomicReference<>();
 		// 다른 테스트가 반환한 풀링 커넥션을 재사용하면 서버가 닫는 중인 커넥션을 물려받아 핸드셰이크가
@@ -101,6 +101,38 @@ class CollabWebSocketHandlerTest {
 				.block(Duration.ofSeconds(5));
 
 		assertThat(closeStatus.get().getCode()).isEqualTo(4000);
+	}
+
+	/** 이슈 #62 — 토큰 만료 타이머를 걸어도, 클라이언트가 먼저 정상 종료하면 그 종료(1000)가 그대로
+	 *  전달돼야 한다. 타이머 쪽 Mono가 경합에서 져도 뒤늦게 4000으로 덮어쓰지 않는지 확인한다. */
+	@Test
+	void closesConnectionWithCode1000WhenClientClosesNormallyBeforeTokenExpires() {
+		String subject = "normal-close-user";
+		String token = TestJwtSupport.signedJwt(subject, List.of("USER"));
+
+		AtomicReference<CloseStatus> closeStatus = new AtomicReference<>();
+		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient(HttpClient.create(ConnectionProvider.newConnection()));
+
+		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), new HttpHeaders(), new WebSocketHandler() {
+
+					@Override
+					public List<String> getSubProtocols() {
+						return List.of("access_token", token);
+					}
+
+					@Override
+					public Mono<Void> handle(WebSocketSession session) {
+						// receive()를 take(1)로 취소하면서 닫으면 클라이언트 쪽 취소가 종료 핸드셰이크보다
+						// 먼저 커넥션을 끊어버려 1006으로 관측된다 — 취소 없이 끝까지 구독해야 한다.
+						Mono<Void> drainInbound = session.receive().then();
+						Mono<Void> initiateClose = session.close();
+						Mono<Void> captureCloseStatus = session.closeStatus().doOnNext(closeStatus::set).then();
+						return Mono.when(drainInbound, initiateClose, captureCloseStatus);
+					}
+				})
+				.block(Duration.ofSeconds(5));
+
+		assertThat(closeStatus.get().getCode()).isEqualTo(1000);
 	}
 
 	/** 서브프로토콜을 아예 안 보내면 인증 컨버터가 빈 Mono를 반환하고, authorizeExchange가 미인증으로 거부한다(핸드셰이크 단계 401). */

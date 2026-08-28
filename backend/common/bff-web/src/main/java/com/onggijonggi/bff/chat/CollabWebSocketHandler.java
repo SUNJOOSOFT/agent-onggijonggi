@@ -43,7 +43,9 @@ public class CollabWebSocketHandler implements WebSocketHandler {
 		if (tokenExpiresAt == null) {
 			return session.close();
 		}
-		Mono<Void> untilPeerOrServerCloses = session.receive().then();
+		// receive()가 끝났다고 종료 핸드셰이크가 저절로 완료되는 게 아니다 — 여기서 close()를 명시적으로
+		// 부르지 않으면 클라이언트는 정상 종료도 1006(비정상)으로 본다.
+		Mono<Void> untilPeerOrServerCloses = session.receive().then(session.close());
 		Mono<Void> untilTokenExpires = Mono.delay(durationUntil(tokenExpiresAt)).then(session.close(TOKEN_EXPIRED));
 		return Mono.firstWithSignal(untilPeerOrServerCloses, untilTokenExpires);
 	}
