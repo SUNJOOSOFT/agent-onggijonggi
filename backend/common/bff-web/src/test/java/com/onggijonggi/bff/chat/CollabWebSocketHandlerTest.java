@@ -3,6 +3,7 @@ package com.onggijonggi.bff.chat;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -11,10 +12,13 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.reactive.socket.CloseStatus;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.reactive.socket.client.ReactorNettyWebSocketClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,6 +68,39 @@ class CollabWebSocketHandlerTest {
 				.block(Duration.ofSeconds(5));
 
 		assertThat(received.get()).isEqualTo("connected:" + subject);
+	}
+
+	/** 이슈 #62 — 연결 유지 중 토큰이 만료되면 서버가 연결을 끊지 않고 그대로 두는 게 아니라, 커스텀 close
+	 *  code(4000)로 강제 종료해 클라이언트(#4)가 일반 네트워크 끊김(1006)과 구분해 재조회·재연결하게 한다. */
+	@Test
+	void closesConnectionWithCode4000WhenTokenExpiresWhileConnected() {
+		String subject = "token-expiry-user";
+		String token = TestJwtSupport.signedJwtExpiringAt(subject, List.of("USER"), Instant.now().plusMillis(800));
+
+		AtomicReference<CloseStatus> closeStatus = new AtomicReference<>();
+		// 다른 테스트가 반환한 풀링 커넥션을 재사용하면 서버가 닫는 중인 커넥션을 물려받아 핸드셰이크가
+		// 꼬일 수 있다 — 이 테스트만 풀 없이 매번 새 커넥션을 맺는다.
+		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient(HttpClient.create(ConnectionProvider.newConnection()));
+
+		client.execute(URI.create("ws://localhost:" + port + "/api/ws"), new HttpHeaders(), new WebSocketHandler() {
+
+					@Override
+					public List<String> getSubProtocols() {
+						return List.of("access_token", token);
+					}
+
+					@Override
+					public Mono<Void> handle(WebSocketSession session) {
+						// receive()도 함께 구독해야 인바운드 프레임에 수요(demand)가 걸린다 — closeStatus()만
+						// 구독하면 서버가 보낸 프레임이 전혀 소비되지 않아 close 프레임도 도달하지 않는다.
+						Mono<Void> drainInbound = session.receive().then();
+						Mono<Void> captureCloseStatus = session.closeStatus().doOnNext(closeStatus::set).then();
+						return Mono.when(drainInbound, captureCloseStatus);
+					}
+				})
+				.block(Duration.ofSeconds(5));
+
+		assertThat(closeStatus.get().getCode()).isEqualTo(4000);
 	}
 
 	/** 서브프로토콜을 아예 안 보내면 인증 컨버터가 빈 Mono를 반환하고, authorizeExchange가 미인증으로 거부한다(핸드셰이크 단계 401). */

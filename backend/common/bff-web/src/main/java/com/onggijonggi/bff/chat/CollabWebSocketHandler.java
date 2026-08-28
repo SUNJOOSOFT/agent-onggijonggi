@@ -1,22 +1,28 @@
 package com.onggijonggi.bff.chat;
 
 import java.security.Principal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import com.onggijonggi.bff.security.WsSubProtocolBearerTokenConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.socket.CloseStatus;
 import org.springframework.web.reactive.socket.WebSocketHandler;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import reactor.core.publisher.Mono;
 
 /**
  * Class Name : CollabWebSocketHandler.java
- * Description : 협업채팅 WS 연결의 단일 진입점(이슈 #3) — 지금은 핸드셰이크 인증이 실제로 통과해
- *               핸들러까지 도달하는지만 증명하는 자리표시자다. 인증된 사용자의 subject를 첫 프레임으로
- *               돌려주고 세션을 닫는다. 방 레지스트리·메시지 방송(#16)이 이 핸들러의 본체를 이어받는다.
+ * Description : 협업채팅 WS 연결의 단일 진입점(이슈 #3) — 인증된 사용자의 subject를 첫 프레임으로 돌려준 뒤,
+ *               클라이언트가 정상 종료하거나 인증 토큰이 만료될 때까지 세션을 유지한다(이슈 #62).
+ *               방 레지스트리·메시지 방송(#16)이 이 핸들러의 본체를 이어받는다.
  */
 @Component
 public class CollabWebSocketHandler implements WebSocketHandler {
+
+	/** #2에서 확정된 재연결 전략의 서버 측 신호 — 클라이언트(#4)가 이 코드를 보고 세션 재조회 후 재연결한다. */
+	private static final CloseStatus TOKEN_EXPIRED = new CloseStatus(4000, "token expired");
 
 	@Override
 	public List<String> getSubProtocols() {
@@ -26,18 +32,38 @@ public class CollabWebSocketHandler implements WebSocketHandler {
 	@Override
 	public Mono<Void> handle(WebSocketSession session) {
 		return session.getHandshakeInfo().getPrincipal()
-				.map(CollabWebSocketHandler::subjectOf)
-				.defaultIfEmpty("EMPTY")
-				.flatMap(subject -> session.send(Mono.just(session.textMessage("connected:" + subject))))
-				.then(session.close());
+				.map(CollabWebSocketHandler::sessionInfoOf)
+				.defaultIfEmpty(new SessionInfo("EMPTY", null))
+				.flatMap(info -> session.send(Mono.just(session.textMessage("connected:" + info.subject())))
+						.then(awaitClosedOrTokenExpiry(session, info.tokenExpiresAt())));
 	}
 
-	/** JwtAuthenticationToken이면 실제 JWT sub 클레임을 쓴다 — getName()만으로는 principal 구현체에 따라 다른 값이 나올 수 있다. */
-	private static String subjectOf(Principal principal) {
-		if (principal instanceof JwtAuthenticationToken jwtAuthentication) {
-			return jwtAuthentication.getToken().getSubject();
+	/** 클라이언트가 먼저 닫으면 그대로 끝나고, 토큰 만료 시각이 먼저 오면 서버가 4000으로 강제 종료한다. */
+	private static Mono<Void> awaitClosedOrTokenExpiry(WebSocketSession session, Instant tokenExpiresAt) {
+		if (tokenExpiresAt == null) {
+			return session.close();
 		}
-		return principal.getName();
+		Mono<Void> untilPeerOrServerCloses = session.receive().then();
+		Mono<Void> untilTokenExpires = Mono.delay(durationUntil(tokenExpiresAt)).then(session.close(TOKEN_EXPIRED));
+		return Mono.firstWithSignal(untilPeerOrServerCloses, untilTokenExpires);
+	}
+
+	/** exp가 이미 지났으면(검증 통과 직후 clock skew 안에서도 있을 수 있음) 곧바로 타이머가 울리도록 0으로 clamp한다. */
+	private static Duration durationUntil(Instant instant) {
+		Duration remaining = Duration.between(Instant.now(), instant);
+		return remaining.isNegative() ? Duration.ZERO : remaining;
+	}
+
+	/** JwtAuthenticationToken이면 실제 JWT의 sub·exp 클레임을 쓴다 — getName()만으로는 principal 구현체에 따라 다른 값이 나올 수 있다. */
+	private static SessionInfo sessionInfoOf(Principal principal) {
+		if (principal instanceof JwtAuthenticationToken jwtAuthentication) {
+			var jwt = jwtAuthentication.getToken();
+			return new SessionInfo(jwt.getSubject(), jwt.getExpiresAt());
+		}
+		return new SessionInfo(principal.getName(), null);
+	}
+
+	private record SessionInfo(String subject, Instant tokenExpiresAt) {
 	}
 
 }

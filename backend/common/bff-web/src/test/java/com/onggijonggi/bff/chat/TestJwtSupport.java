@@ -1,5 +1,6 @@
 package com.onggijonggi.bff.chat;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,16 @@ final class TestJwtSupport {
 	*/
 	static String signedJwtWithoutAudience(String subject, List<String> roles) {
 		return sign(claimsBuilder(subject, roles));
+	}
+
+	/** signedJwtExpiringAt: exp 클레임을 지정한 시각으로 덮어쓴 토큰을 만든다 — 이슈 #62의 토큰 만료
+	 * 강제 종료 타이머를 테스트에서 짧은 지연으로 재현하기 위한 전용 오버로드. aud는 signedJwt와
+	 * 동일하게 DEFAULT_AUDIENCE를 쓴다.
+	 * @param subject sub·preferred_username 클레임에 쓰는 값
+	 * @param roles realm_access.roles 클레임(빈 리스트면 role 없는 사용자)
+	 */
+	static String signedJwtExpiringAt(String subject, List<String> roles, Instant expiresAt) {
+		return sign(claimsBuilder(subject, roles).audience(DEFAULT_AUDIENCE).expirationTime(Date.from(expiresAt)));
 	}
 
 	private static JWTClaimsSet.Builder claimsBuilder(String subject, List<String> roles) {
