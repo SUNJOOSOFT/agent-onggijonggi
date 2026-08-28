@@ -12,12 +12,19 @@
  그 대신 쓰는 신호가 close code다(이슈 #2 확정, 서버 측은 #62):
    - 4000(토큰 만료) — 서버가 exp 타이머로 끊은 것. 세션을 재조회해 곧바로 재연결한다.
    - 1000(정상 종료) — 되살리지 않는다.
-   - 그 외(1006 등) — 토큰 문제가 아니므로 재조회 없이 백오프 재연결만 한다.
+   - 그 외(1006 등) — 토큰 문제로 단정할 수 없으니 백오프 재연결만 한다. 다만 연속으로 거부되면
+     그때는 세션을 다시 조회한다(아래).
 
  "재조회 후에도 무효면 재로그인"은 4000 직후의 핸드셰이크 실패로만 판정한다 — 서버 다운과
  인증 거부가 클라이언트에서 똑같이 1006으로 보이기 때문에, 만료 통보를 받은 직후라는 문맥이
  없으면 인증 실패로 단정할 수 없다. 그 문맥 밖의 실패를 재로그인으로 처리하면 서버가 잠깐
  죽었을 뿐인데 사용자를 로그인 화면으로 쫓아내게 된다.
+
+ 다만 그 문맥 밖이라고 아무것도 안 하면, 낡은 토큰을 든 채 영원히 같은 실패를 반복하게 된다
+ (PR #68 리뷰 지적). 그래서 핸드셰이크가 연속으로 거부되면 세션을 다시 조회한다 — 재로그인
+ 여부의 판정을 close code가 아니라 next-auth에 넘기는 것이다. 세션이 실제로 죽었으면
+ (RefreshAccessTokenError·토큰 없음) freshToken()이 그 자리에서 재로그인시키고, 살아 있으면
+ 새 토큰을 받아 백오프 재연결을 이어간다.
  *********************************************************/
 
 import { getSession, signIn } from 'next-auth/react';
@@ -37,6 +44,11 @@ const CLOSE_ABNORMAL = 1006;
 
 /** 재연결 백오프 상한 — http.ts의 429 백오프와 같은 값으로 맞춘다. */
 const RECONNECT_BACKOFF_CAP_MS = 10_000;
+
+/** 핸드셰이크가 이만큼 연속으로 거부되면 세션을 다시 조회한다. 1회로 하면 서버가 잠깐 흔들릴 때마다
+ * /api/auth/session을 두드리게 되고, 너무 늘리면 낡은 토큰으로 헛도는 시간이 길어진다. 3회면 백오프
+ * 곡선상 약 7초다. */
+const HANDSHAKE_FAILURES_BEFORE_REFRESH = 3;
 
 /** 표준 WebSocket에서 이 계층이 실제로 쓰는 부분만 추린 구조적 타입. vitest 환경이 'node'라
  * 전역 WebSocket이 없어, 테스트가 가짜 소켓을 끼울 수 있어야 한다. */
@@ -145,6 +157,8 @@ export function openWsConnection(
     let afterExpiry = false;
     let expiryRetried = false;
     let backoffAttempt = 0;
+    // 한 번도 열리지 못한 핸드셰이크가 연속 몇 번인지. 열리면 0으로 되돌린다.
+    let failedHandshakes = 0;
 
     while (token !== null && !closedByCaller) {
       const { opened, code } = await connectOnce(token, options, deps, (s) => {
@@ -155,6 +169,7 @@ export function openWsConnection(
       if (opened) {
         backoffAttempt = 0;
         expiryRetried = false;
+        failedHandshakes = 0;
         if (code === CLOSE_TOKEN_EXPIRED) {
           // 만료를 통보받았으니 재조회한 토큰으로 곧바로 다시 붙는다 — 여기서 기다릴 이유가 없다.
           afterExpiry = true;
@@ -171,6 +186,14 @@ export function openWsConnection(
         expiryRetried = true;
         token = await freshToken();
         continue;
+      } else {
+        // 만료 문맥 밖에서 계속 거부되는 경우. 재로그인을 단정할 수는 없지만 토큰을 다시 받아보는
+        // 것까지는 안전하다 — 세션이 죽었다면 freshToken()이 재로그인으로 보낸다.
+        failedHandshakes += 1;
+        if (failedHandshakes >= HANDSHAKE_FAILURES_BEFORE_REFRESH) {
+          failedHandshakes = 0;
+          token = await freshToken();
+        }
       }
 
       backoffAttempt += 1;

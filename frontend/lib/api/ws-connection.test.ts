@@ -176,6 +176,32 @@ describe('openWsConnection', () => {
     h.connection.close();
   });
 
+  it('만료 문맥 밖에서도 핸드셰이크가 3번 연속 거부되면 세션을 다시 조회한다', async () => {
+    const h = harness([{ accessToken: 't1' }, { accessToken: 't2' }]);
+
+    // 한 번도 open()하지 않는다 — 핸드셰이크가 거부되는 경우다. 4000을 받은 적이 없으므로
+    // 만료 문맥(afterExpiry) 밖이고, 예전에는 이 경로가 같은 토큰으로 무한 재시도만 했다.
+    for (const n of [1, 2, 3]) (await h.waitForSocket(n)).serverClose(1006);
+
+    const fourth = await h.waitForSocket(4);
+    expect(fourth.protocols).toEqual(['access_token', 't2']);
+    expect(h.getSession).toHaveBeenCalledTimes(2);
+    h.connection.close();
+  });
+
+  it('3번 연속 거부 시점에 세션이 죽어 있으면 재로그인시킨다', async () => {
+    const h = harness([
+      { accessToken: 't1' },
+      { accessToken: 't1', error: 'RefreshAccessTokenError' },
+    ]);
+
+    for (const n of [1, 2, 3]) (await h.waitForSocket(n)).serverClose(1006);
+
+    // 재조회로 판정을 next-auth에 넘긴 결과다 — close code만 보고 단정한 게 아니다.
+    await vi.waitFor(() => expect(h.signIn).toHaveBeenCalledWith('keycloak'));
+    expect(h.sockets).toHaveLength(3);
+  });
+
   it('만료 통보 후 재조회한 토큰으로도 핸드셰이크가 거부되면 1회 더 재조회하고 재로그인시킨다', async () => {
     const h = harness([{ accessToken: 't1' }]);
     const first = await h.waitForSocket(1);
