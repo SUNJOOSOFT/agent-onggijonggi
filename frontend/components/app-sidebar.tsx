@@ -187,6 +187,23 @@ export function AppSidebar({
           </div>
         </SidebarHeader>
         <SidebarContent>
+            {/* 협업 채널(이슈 #19)은 세션 목록과 성격이 달라 검색·목록 위에 따로 둔다. */}
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link
+                    href="/collab"
+                    onClick={() => {
+                      setOpenMobile(false);
+                    }}
+                  >
+                    협업 채널
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
           <SidebarGroup>
             <div className="relative px-2 pb-2">
               <Input

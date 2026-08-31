@@ -53,6 +53,7 @@ const HANDSHAKE_FAILURES_BEFORE_REFRESH = 3;
 /** 표준 WebSocket에서 이 계층이 실제로 쓰는 부분만 추린 구조적 타입. vitest 환경이 'node'라
  * 전역 WebSocket이 없어, 테스트가 가짜 소켓을 끼울 수 있어야 한다. */
 export interface SocketLike {
+  send(data: string): void;
   addEventListener(
     type: 'open' | 'message' | 'close',
     listener: (event: { data?: unknown; code?: number }) => void,
@@ -61,16 +62,17 @@ export interface SocketLike {
 }
 
 interface WsConnectionDeps {
-  /** URL 결정까지 소켓 팩토리가 맡는다 — 그래야 테스트가 window.location에 기대지 않는다. */
-  createSocket: (protocols: string[]) => SocketLike;
+  /** URL 결정까지 소켓 팩토리가 맡는다 — 그래야 테스트가 window.location에 기대지 않는다.
+   * 경로를 인자로 받는 것은 협업방마다 쿼리가 달라지기 때문이다(이슈 #19). */
+  createSocket: (protocols: string[], path: string) => SocketLike;
   getSession: typeof getSession;
   signIn: typeof signIn;
   sleep: (ms: number) => Promise<void>;
 }
 
 const defaultDeps: WsConnectionDeps = {
-  createSocket: (protocols) =>
-    new WebSocket(bffWsUrl(WS_PATH), protocols) as unknown as SocketLike,
+  createSocket: (protocols, path) =>
+    new WebSocket(bffWsUrl(path), protocols) as unknown as SocketLike,
   getSession,
   signIn,
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
@@ -81,11 +83,24 @@ export interface WsConnectionOptions {
   onMessage: (data: string) => void;
   /** 재로그인이 강제되는 순간 불린다 — http.ts의 onForcedReauth와 같은 목적이다. */
   onForcedReauth?: () => void;
+  /** 붙을 경로. 협업방은 방을 쿼리로 지정하므로 호출부가 collabWsPath()로 만들어 넘긴다(이슈 #19).
+   * 기본값은 방을 지정하지 않는 1:1 경로다. */
+  path?: string;
+  /** 연결이 열리고 끊길 때마다 불린다. 화면이 "연결 중" 표시와 전송 버튼 활성화를 이걸로 정한다. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export interface WsConnection {
   /** 재연결 루프를 멈추고 소켓을 정상 종료(1000)한다. 이후 어떤 콜백도 불리지 않는다. */
   close: () => void;
+  /**
+   * 프레임 하나를 보낸다. 연결돼 있으면 true, 끊겨 있으면 **보내지 않고** false.
+   *
+   * 재연결될 때까지 큐에 쌓지 않는다 — 몇 초 뒤 되살아난 커넥션으로 뒤늦게 메시지가 튀어나오면
+   * 협업방에서는 대화 순서가 어긋난다. 보내지 못했다는 사실을 그 자리에서 호출부에 돌려주고,
+   * 다시 보낼지는 사용자가 정하게 한다.
+   */
+  send: (data: string) => boolean;
 }
 
 /** 재연결 대기 시간. http.ts의 retryAfterMs 폴백과 같은 지수 곡선(1s, 2s, 4s ...)에 상한을 둔다. */
@@ -97,6 +112,7 @@ export function reconnectBackoffMs(attempt: number): number {
  * 이 둘의 조합이 "인증이 거부됐다"와 "연결은 됐다가 끊겼다"를 가르는 유일한 단서다. */
 function connectOnce(
   token: string,
+  path: string,
   options: WsConnectionOptions,
   deps: WsConnectionDeps,
   onSocket: (socket: SocketLike) => void,
@@ -104,18 +120,21 @@ function connectOnce(
   return new Promise((resolve) => {
     // 표준 WebSocket API는 핸드셰이크에 Authorization 헤더를 못 실으므로 서브프로토콜 두 값으로
     // 토큰을 넘긴다 — 서버 WsSubProtocolBearerTokenConverter와 짝이다(이슈 #3).
-    const socket = deps.createSocket([PROTOCOL_NAME, token]);
+    const socket = deps.createSocket([PROTOCOL_NAME, token], path);
     onSocket(socket);
 
     let opened = false;
     socket.addEventListener('open', () => {
       opened = true;
+      options.onOpenChange?.(true);
     });
     socket.addEventListener('message', (event) => {
       // 서버는 텍스트 프레임만 보낸다. Blob·ArrayBuffer가 오면 이 계층이 다룰 것이 아니다.
       if (typeof event.data === 'string') options.onMessage(event.data);
     });
     socket.addEventListener('close', (event) => {
+      // 열린 적 없는 소켓의 close는 알릴 것이 없다 — 화면은 애초에 열림을 본 적이 없다.
+      if (opened) options.onOpenChange?.(false);
       // code가 없는 close는 표준상 나오지 않지만, 온다면 정상 종료로 읽어 조용히 끊기는 것보다
       // 비정상으로 읽어 재연결을 시도하는 쪽이 안전하다.
       resolve({ opened, code: event.code ?? CLOSE_ABNORMAL });
@@ -134,6 +153,19 @@ export function openWsConnection(
 ): WsConnection {
   let closedByCaller = false;
   let socket: SocketLike | null = null;
+  // send()가 봐야 하는 상태. 소켓 객체만으로는 지금 열려 있는지 알 수 없다 — SocketLike에
+  // readyState를 넣지 않았다(테스트용 가짜 소켓이 그것까지 흉내 내야 하는 부담을 피한 선택이다).
+  let isOpen = false;
+  const path = options.path ?? WS_PATH;
+
+  // 열림 여부를 이 계층도 알아야 하므로 화면에 알리는 콜백을 가로채 함께 갱신한다.
+  const trackedOptions: WsConnectionOptions = {
+    ...options,
+    onOpenChange: (open) => {
+      isOpen = open;
+      options.onOpenChange?.(open);
+    },
+  };
 
   const forceReauth = async () => {
     options.onForcedReauth?.();
@@ -161,9 +193,15 @@ export function openWsConnection(
     let failedHandshakes = 0;
 
     while (token !== null && !closedByCaller) {
-      const { opened, code } = await connectOnce(token, options, deps, (s) => {
-        socket = s;
-      });
+      const { opened, code } = await connectOnce(
+        token,
+        path,
+        trackedOptions,
+        deps,
+        (s) => {
+          socket = s;
+        },
+      );
       if (closedByCaller || code === CLOSE_NORMAL) return;
 
       if (opened) {
@@ -207,6 +245,11 @@ export function openWsConnection(
     close: () => {
       closedByCaller = true;
       socket?.close(CLOSE_NORMAL);
+    },
+    send: (data) => {
+      if (!isOpen || socket === null) return false;
+      socket.send(data);
+      return true;
     },
   };
 }

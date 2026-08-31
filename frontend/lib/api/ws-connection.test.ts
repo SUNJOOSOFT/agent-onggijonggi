@@ -3,6 +3,7 @@ import {
   CLOSE_TOKEN_EXPIRED,
   type SocketLike,
   type WsConnection,
+  type WsConnectionOptions,
   openWsConnection,
   reconnectBackoffMs,
 } from './ws-connection';
@@ -11,14 +12,21 @@ import {
  * 전역 WebSocket이 없고, 있더라도 close code를 마음대로 만들어낼 수 없다. */
 class FakeSocket implements SocketLike {
   readonly protocols: string[];
+  readonly path: string;
+  readonly sent: string[] = [];
   closedWith: number | null = null;
   private readonly listeners = new Map<
     string,
     ((event: { data?: unknown; code?: number }) => void)[]
   >();
 
-  constructor(protocols: string[]) {
+  constructor(protocols: string[], path: string) {
     this.protocols = protocols;
+    this.path = path;
+  }
+
+  send(data: string): void {
+    this.sent.push(data);
   }
 
   addEventListener(
@@ -69,6 +77,7 @@ function harness(
     accessToken?: string;
     error?: 'RefreshAccessTokenError';
   } | null)[],
+  extraOptions: Omit<WsConnectionOptions, 'onMessage'> = {},
 ): Harness {
   const sockets: FakeSocket[] = [];
   // 준비한 세션을 순서대로 하나씩 내주고, 다 떨어지면 마지막 것을 계속 돌려준다.
@@ -83,10 +92,10 @@ function harness(
   const onMessage = vi.fn();
 
   const connection = openWsConnection(
-    { onMessage },
+    { onMessage, ...extraOptions },
     {
-      createSocket: (protocols) => {
-        const socket = new FakeSocket(protocols);
+      createSocket: (protocols, path) => {
+        const socket = new FakeSocket(protocols, path);
         sockets.push(socket);
         return socket;
       },
@@ -225,8 +234,8 @@ describe('openWsConnection', () => {
     openWsConnection(
       { onMessage: vi.fn(), onForcedReauth },
       {
-        createSocket: (protocols) => {
-          const socket = new FakeSocket(protocols);
+        createSocket: (protocols, path) => {
+          const socket = new FakeSocket(protocols, path);
           sockets.push(socket);
           return socket;
         },
@@ -253,5 +262,69 @@ describe('openWsConnection', () => {
     expect(socket.closedWith).toBe(1000);
     await vi.waitFor(() => expect(h.sleep).not.toHaveBeenCalled());
     expect(h.sockets).toHaveLength(1);
+  });
+});
+
+describe('openWsConnection - 협업방(이슈 #19)', () => {
+  it('경로를 넘기지 않으면 방 없는 기본 경로로 붙는다', async () => {
+    const h = harness([{ accessToken: 't1' }]);
+    const socket = await h.waitForSocket(1);
+    expect(socket.path).toBe('/api/ws');
+    h.connection.close();
+  });
+
+  it('넘긴 경로를 그대로 소켓에 쓴다 — 방은 쿼리로만 구분된다', async () => {
+    const h = harness([{ accessToken: 't1' }], {
+      path: '/api/ws?threadId=room-7',
+    });
+    const socket = await h.waitForSocket(1);
+    expect(socket.path).toBe('/api/ws?threadId=room-7');
+    h.connection.close();
+  });
+
+  it('열려 있을 때만 보내고, 끊겨 있으면 보내지 않고 false를 준다', async () => {
+    const h = harness([{ accessToken: 't1' }]);
+    const socket = await h.waitForSocket(1);
+
+    // 아직 open 이벤트가 오지 않았다 — 핸드셰이크 중에 누른 전송이다.
+    expect(h.connection.send('early')).toBe(false);
+    expect(socket.sent).toEqual([]);
+
+    socket.open();
+    expect(h.connection.send('hello')).toBe(true);
+    expect(socket.sent).toEqual(['hello']);
+
+    // 끊긴 뒤의 메시지는 큐에 쌓지 않는다 — 되살아난 커넥션으로 뒤늦게 나가면 순서가 어긋난다.
+    socket.serverClose(1006);
+    expect(h.connection.send('after close')).toBe(false);
+    expect(socket.sent).toEqual(['hello']);
+
+    h.connection.close();
+  });
+
+  it('열리고 끊길 때마다 화면에 알린다', async () => {
+    const onOpenChange = vi.fn();
+    const h = harness([{ accessToken: 't1' }], { onOpenChange });
+    const socket = await h.waitForSocket(1);
+
+    socket.open();
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+
+    socket.serverClose(1006);
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    expect(onOpenChange).toHaveBeenCalledTimes(2);
+
+    h.connection.close();
+  });
+
+  it('열린 적 없이 거부된 핸드셰이크는 닫혔다고 알리지 않는다', async () => {
+    const onOpenChange = vi.fn();
+    const h = harness([{ accessToken: 't1' }], { onOpenChange });
+    const socket = await h.waitForSocket(1);
+
+    socket.serverClose(1006);
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    h.connection.close();
   });
 });

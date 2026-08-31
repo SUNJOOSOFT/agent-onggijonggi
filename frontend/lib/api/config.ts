@@ -18,8 +18,17 @@ export const bffUrl = (path: string): string => `${BFF_BASE_URL}${path}`;
  * 서버 컴포넌트가 쓰는 베이스 URL. BFF_BASE_URL은 브라우저가 보는 공개 주소라
  * 컨테이너 안에서는 자기 자신을 가리켜 ConnectionRefused가 난다 — 도커로 띄울 때만
  * 주입되는 내부 주소(BFF_INTERNAL_URL)를 먼저 쓰고, 없으면 공개 주소로 되돌아간다.
+ *
+ * 둘 다 비어 있는 목업 모드에서는 목업 라우트를 들고 있는 Next 자신의 주소를 쓴다. 빈 문자열을
+ * 그대로 두면 경로가 상대주소가 되는데, 브라우저와 달리 Node의 fetch는 기준 오리진이 없어
+ * "Failed to parse URL from /api/chat/sessions"로 죽는다 — 목업만으로는 채팅 화면이 아예 열리지
+ * 않던 원인이다.
  */
-const SERVER_BFF_BASE_URL = process.env.BFF_INTERNAL_URL ?? BFF_BASE_URL;
+const SERVER_BFF_BASE_URL =
+  process.env.BFF_INTERNAL_URL ||
+  BFF_BASE_URL ||
+  process.env.NEXTAUTH_URL ||
+  'http://localhost:3000';
 
 /** 계약 경로를 서버용 BFF 베이스 URL 에 결합한다. 서버 컴포넌트 전용. */
 export const serverBffUrl = (path: string): string =>
@@ -29,6 +38,9 @@ export const MODELS_PATH = '/api/models';
 export const CHAT_STREAM_PATH = '/api/chat/stream';
 export const CHAT_CITATIONS_PATH = '/api/chat/citations';
 export const CHAT_SESSIONS_PATH = '/api/chat/sessions';
+
+/** 협업 채널(방) 목록 조회 경로(이슈 #19). 목록 필터링은 서버 몫이라 프론트는 표시만 한다. */
+export const COLLAB_THREADS_PATH = '/api/collab/threads';
 
 /** 협업채팅 WS 핸드셰이크 경로 — 서버 WsHandlerMappingConfig의 매핑과 같아야 한다(이슈 #3). */
 export const WS_PATH = '/api/ws';
@@ -51,6 +63,13 @@ export const bffWsUrl = (path: string): string => {
   const base = BFF_BASE_URL || window.location.origin;
   return `${base}${path}`.replace(/^http/, 'ws');
 };
+
+/**
+ * 협업방 WS 경로 — 어느 방에 들어갈지는 쿼리로 넘긴다(이슈 #19). 서버 핸들러 매핑은 WS_PATH
+ * 하나뿐이라(#3) 방 구분은 경로가 아니라 파라미터의 몫이고, 이 이름을 읽는 쪽은 아직 #16이다.
+ */
+export const collabWsPath = (threadId: string): string =>
+  `${WS_PATH}?threadId=${encodeURIComponent(threadId)}`;
 
 /** 세션별 대화 이력 조회 경로. */
 export const chatSessionMessagesPath = (sessionId: string): string =>
