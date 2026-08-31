@@ -13,7 +13,7 @@
 
  재현하는 프레임은 #8 계약 그대로다(`lib/transport/frames.ts`가 그 미러):
    presence.join  — 입장. 퇴장 대칭 프레임은 #8에 아직 없어(#25 논의 중) 보내지 않는다.
-   chat.message   — 참여자 발화. 방 전원에게 방송만 한다.
+   chat.message   — 참여자 메시지. 방 전원에게 방송만 한다.
    chat.answer    — `@AI` 멘션이 있을 때만 흐르는 답변 스트림(#13·#17 정책).
    error          — 깨진 프레임, 그리고 방 접근 거부(rooms.ts의 두 방식 중 하나).
  *********************************************************/
@@ -170,13 +170,13 @@ const server = Bun.serve<SocketData>({
       if (frame === null) {
         const error = errorFrame(
           threadId,
-          'INVALID_FRAME',
+          'MALFORMED_REQUEST',
           '프레임을 해석할 수 없습니다.',
         );
         ws.send(JSON.stringify(error));
         return;
       }
-      // 클라이언트가 올려보내는 건 발화뿐이다. 나머지 타입은 서버가 내려보내는 것이라 무시한다.
+      // 클라이언트가 올려보내는 건 메시지뿐이다. 나머지 타입은 서버가 내려보내는 것이라 무시한다.
       if (frame.type !== 'chat.message') return;
 
       // from은 클라이언트 말이 아니라 커넥션에 붙은 사용자로 덮어쓴다.
