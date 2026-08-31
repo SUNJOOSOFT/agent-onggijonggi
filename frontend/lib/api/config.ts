@@ -65,11 +65,14 @@ export const bffWsUrl = (path: string): string => {
 };
 
 /**
- * 협업방 WS 경로 — 어느 방에 들어갈지는 쿼리로 넘긴다(이슈 #19). 서버 핸들러 매핑은 WS_PATH
- * 하나뿐이라(#3) 방 구분은 경로가 아니라 파라미터의 몫이고, 이 이름을 읽는 쪽은 아직 #16이다.
+ * 협업방 WS 경로 — 어느 방에 들어갈지를 경로 세그먼트로 넘긴다(이슈 #19).
+ *
+ * 서버가 읽는 방식에 맞춘 것이다. #16(PR #77)의 WsHandlerMappingConfig가 `/api/ws/{threadId}`로
+ * 매핑하고 CollabWebSocketHandler가 그 세그먼트를 UUID로 파싱한다 — 쿼리로 보내면 라우팅
+ * 자체가 되지 않는다. 그래서 실서버에서는 threadId가 UUID여야 한다(목업은 검증하지 않는다).
  */
 export const collabWsPath = (threadId: string): string =>
-  `${WS_PATH}?threadId=${encodeURIComponent(threadId)}`;
+  `${WS_PATH}/${encodeURIComponent(threadId)}`;
 
 /** 세션별 대화 이력 조회 경로. */
 export const chatSessionMessagesPath = (sessionId: string): string =>

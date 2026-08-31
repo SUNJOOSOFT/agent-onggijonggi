@@ -72,12 +72,21 @@ function appendMessage(
   };
 }
 
-/** 흐르는 중인 AI 답변이 목록 맨 끝에 있으면 그것을 돌려준다. 없으면 null. */
+/**
+ * 흐르는 중인 AI 답변의 자리를 돌려준다. 없으면 null.
+ *
+ * 맨 끝만 보면 안 된다 — 답변이 흐르는 도중 다른 참여자가 말하면 그 메시지가 끝에 붙고, 이어지는
+ * delta가 이 답변을 못 찾아 말풍선이 둘로 갈린다. 여러 명이 있는 방에서는 흔한 순서다(PR #80 리뷰).
+ *
+ * 흐르는 답변이 둘 이상이면 가장 최근 것에 잇는다. 프레임에 스트림 식별자가 없어(#8) 어느 답변의
+ * delta인지 가릴 수 없기 때문이고, `@AI` 호출이 동시에 여러 개 흐를 수 있는지는 #17이 정한다.
+ */
 function streamingAnswerIndex(state: RoomState): number | null {
-  const last = state.messages.length - 1;
-  if (last < 0) return null;
-  const message = state.messages[last];
-  return message.from === null && message.streaming ? last : null;
+  for (let index = state.messages.length - 1; index >= 0; index -= 1) {
+    const message = state.messages[index];
+    if (message.from === null && message.streaming) return index;
+  }
+  return null;
 }
 
 /** 흐르는 중인 AI 답변에 delta를 잇고 종료 여부를 반영한다. */

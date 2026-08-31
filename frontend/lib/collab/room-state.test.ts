@@ -92,6 +92,21 @@ describe('applyFrame - chat.answer', () => {
     expect(fold([answer('', 'streaming')]).messages).toEqual([]);
   });
 
+  it('답변이 흐르는 중에 다른 사람이 말해도 한 말풍선으로 잇는다', () => {
+    // 협업방에서는 흔한 순서다. 맨 끝만 보고 이어붙이면 답변이 둘로 갈린다(PR #80 리뷰).
+    const state = fold([
+      answer('제12조에 ', 'streaming'),
+      say('minho', '저도 그거 궁금했어요'),
+      answer('따르면 10%입니다.', 'done'),
+    ]);
+
+    expect(state.messages.map((m) => m.from)).toEqual([null, 'minho']);
+    expect(state.messages[0]).toMatchObject({
+      content: '제12조에 따르면 10%입니다.',
+      streaming: false,
+    });
+  });
+
   it('사람 메시지 뒤에 오면 그 메시지에 섞이지 않는다', () => {
     const state = fold([say('sujin', '@AI 요약해줘'), answer('요약', 'done')]);
     expect(state.messages.map((m) => m.from)).toEqual(['sujin', null]);

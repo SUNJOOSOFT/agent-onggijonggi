@@ -89,7 +89,9 @@ const server = Bun.serve<SocketData>({
   port: PORT,
   fetch(request, server) {
     const url = new URL(request.url);
-    if (url.pathname !== WS_PATH) {
+    // 실서버(#16 PR #77)가 `/api/ws/{threadId}`로 매핑하므로 같은 모양으로 읽는다. 방 없이
+    // `/api/ws`로 붙는 것도 받아 주는데, 개발 중 URL을 매번 적지 않아도 되게 한 편의다.
+    if (url.pathname !== WS_PATH && !url.pathname.startsWith(`${WS_PATH}/`)) {
       return new Response('Not Found', { status: 404 });
     }
 
@@ -100,7 +102,9 @@ const server = Bun.serve<SocketData>({
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const threadId = url.searchParams.get('threadId') ?? DEFAULT_THREAD_ID;
+    const threadId =
+      decodeURIComponent(url.pathname.slice(WS_PATH.length + 1)) ||
+      DEFAULT_THREAD_ID;
     const access = roomAccess(threadId);
     // 핸드셰이크 자체를 거부하면 브라우저에는 status도 body도 닿지 않고 1006으로만 온다
     // (PR #68). 화면이 그 상황을 어떻게 다루는지 보려고 남겨 둔 시나리오다.
