@@ -5,6 +5,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "next dev --turbo",
+    "mock:ws": "bun run mocks/ws-server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "biome lint --write --unsafe --diagnostic-level=error",

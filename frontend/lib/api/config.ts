@@ -34,11 +34,20 @@ export const CHAT_SESSIONS_PATH = '/api/chat/sessions';
 export const WS_PATH = '/api/ws';
 
 /**
+ * 목업 WS 서버(mocks/ws-server.ts) 주소. WS는 Route Handler로 흉내 낼 수 없어 별도 프로세스로
+ * 뜨므로, HTTP 목업을 가르는 BFF_BASE_URL과 달리 자기 토글이 따로 필요하다 — 이 값을 채우면
+ * HTTP는 여전히 동일 오리진 목업 라우트를 쓰면서 WS만 목업 서버로 간다.
+ * 이미 ws(s) 스킴이라 아래 스킴 치환을 거치지 않는다.
+ */
+export const MOCK_WS_BASE_URL = process.env.NEXT_PUBLIC_MOCK_WS_URL ?? '';
+
+/**
  * WS 핸드셰이크용 절대 URL. WebSocket 생성자는 http(s)를 받지 않으므로 스킴을 ws(s)로 바꾼다.
  * BFF_BASE_URL이 비어 있으면(목업 모드) 동일 오리진이라 브라우저의 현재 오리진을 쓴다 —
  * 이 함수는 클라이언트 전용이다(서버 컴포넌트에는 WS를 열 이유가 없다).
  */
 export const bffWsUrl = (path: string): string => {
+  if (MOCK_WS_BASE_URL) return `${MOCK_WS_BASE_URL}${path}`;
   const base = BFF_BASE_URL || window.location.origin;
   return `${base}${path}`.replace(/^http/, 'ws');
 };
