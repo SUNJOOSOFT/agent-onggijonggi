@@ -201,7 +201,7 @@ realm은 **최초 기동 때 한 번만** 만들어진다. 주소나 계정을 �
 
 ```bash
 docker compose down
-docker volume rm agent-ogjg_postgres-data
+docker volume rm ogjg-chat_postgres-data
 docker compose up -d --build
 ```
 

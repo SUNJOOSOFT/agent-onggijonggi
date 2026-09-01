@@ -81,7 +81,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-**✅ 성공**: `agent-ogjg-caddy-1`을 포함해 **6줄**이 뜬다. caddy는 헬스체크가 없어 `Up`으로만 표시되고, 나머지 5개는 `Up (healthy)`가 된다.
+**✅ 성공**: `infra-caddy`를 포함해 **6줄**이 뜬다. caddy는 헬스체크가 없어 `Up`으로만 표시되고, 나머지 5개는 `Up (healthy)`가 된다.
 
 > ⚠️ **caddy가 목록에 없으면** 1단계의 `COMPOSE_PROFILES=caddy`가 빠졌거나 오타다.
 
@@ -200,7 +200,7 @@ Get-NetTCPConnection -LocalPort 80,443 -ErrorAction SilentlyContinue | Select-Ob
 ```bash
 # 이 문서 1단계·2단계를 마친 뒤
 docker compose down
-docker volume rm agent-ogjg_postgres-data
+docker volume rm ogjg-chat_postgres-data
 docker compose up -d --build
 ```
 
