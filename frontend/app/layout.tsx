@@ -14,7 +14,7 @@ import './globals.css';
 export const metadata: Metadata = {
   // 셀프 호스팅이라 고정 도메인이 없어 NEXTAUTH_URL을 쓰고, 없으면 로컬 기본 포트로 폴백한다.
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
-  title: 'agent-onggijonggi',
+  title: 'onggijonggi-chat',
   description: 'LiteLLM 게이트웨이 기반 AI 챗봇.',
 };
 

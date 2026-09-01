@@ -1,4 +1,4 @@
-# agent-onggijonggi
+# onggijonggi-chat
 
 **LiteLLM 게이트웨이 기반 AI 챗봇.** 어떤 모델을 쓸지는 설정 파일 한 곳에서 정한다 — 상용 API(OpenAI·Anthropic 등)든, 직접 띄운 로컬 모델(Ollama·vLLM)이든 같은 방식으로 붙는다.
 
@@ -14,8 +14,8 @@
 ## 빠른 시작
 
 ```bash
-git clone https://github.com/SUNJOOSOFT/agent-onggijonggi.git
-cd agent-onggijonggi/infra
+git clone https://github.com/SUNJOOSOFT/onggijonggi-chat.git
+cd onggijonggi-chat/infra
 cp .env.example .env                           # ① 주소·자격증명은 채워져 있다 — 그대로 둔다
 # ② 모델 연결 — .env 의 LLM_API_KEY 한 줄, 무료 발급 (INSTALL.md 2단계)
 docker compose up -d --build                   # ③ 전체 기동 (첫 빌드 5~15분)

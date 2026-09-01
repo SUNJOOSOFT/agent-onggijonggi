@@ -39,9 +39,9 @@
 사본을 클론한 뒤, 원본을 `upstream`으로 등록해 둔다.
 
 ```bash
-git clone https://github.com/<내-계정>/agent-onggijonggi.git
-cd agent-onggijonggi
-git remote add upstream https://github.com/SUNJOOSOFT/agent-onggijonggi.git
+git clone https://github.com/<내-계정>/onggijonggi-chat.git
+cd onggijonggi-chat
+git remote add upstream https://github.com/SUNJOOSOFT/onggijonggi-chat.git
 ```
 
 ## 브랜치

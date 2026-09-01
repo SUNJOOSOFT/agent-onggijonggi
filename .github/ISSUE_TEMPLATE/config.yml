@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: 보안 취약점 신고
-    url: https://github.com/SUNJOOSOFT/agent-onggijonggi/security/advisories/new
+    url: https://github.com/SUNJOOSOFT/onggijonggi-chat/security/advisories/new
     about: 공개 이슈로 올리지 마세요. 여기로 비공개 신고해 주세요.
   - name: 설치 중 막혔을 때 먼저 볼 곳
-    url: https://github.com/SUNJOOSOFT/agent-onggijonggi/blob/main/INSTALL.md
+    url: https://github.com/SUNJOOSOFT/onggijonggi-chat/blob/main/INSTALL.md
     about: 설치 가이드 본문과 "문제 해결" 항목에 흔한 증상이 정리돼 있습니다.
   - name: 기본 구성의 알려진 제약
-    url: https://github.com/SUNJOOSOFT/agent-onggijonggi/blob/main/INSTALL.md#알아둘-제약
+    url: https://github.com/SUNJOOSOFT/onggijonggi-chat/blob/main/INSTALL.md#알아둘-제약
     about: 평문 HTTP, 개발 모드 Keycloak, 공개된 고정 자격증명, 열린 포트는 의도된 기본값입니다.

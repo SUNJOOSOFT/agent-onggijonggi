@@ -62,16 +62,16 @@ docker compose version
 **macOS · Linux**
 
 ```bash
-git clone https://github.com/SUNJOOSOFT/agent-onggijonggi.git
-cd agent-onggijonggi/infra
+git clone https://github.com/SUNJOOSOFT/onggijonggi-chat.git
+cd onggijonggi-chat/infra
 cp .env.example .env
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-git clone https://github.com/SUNJOOSOFT/agent-onggijonggi.git
-cd agent-onggijonggi\infra
+git clone https://github.com/SUNJOOSOFT/onggijonggi-chat.git
+cd onggijonggi-chat\infra
 Copy-Item .env.example .env
 ```
 

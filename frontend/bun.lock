@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "agent-onggijonggi-frontend",
+      "name": "onggijonggi-chat-frontend",
       "dependencies": {
         "@radix-ui/react-alert-dialog": "^1.1.2",
         "@radix-ui/react-dialog": "^1.1.2",

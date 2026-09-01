@@ -45,7 +45,7 @@ COPY LICENSE.apache-2.0 ./LICENSE
 COPY LICENSE ./LICENSE.vercel-ai-chatbot
 COPY THIRD-PARTY-NOTICES.md ./
 LABEL org.opencontainers.image.licenses="Apache-2.0"
-LABEL org.opencontainers.image.source="https://github.com/SUNJOOSOFT/agent-onggijonggi"
+LABEL org.opencontainers.image.source="https://github.com/SUNJOOSOFT/onggijonggi-chat"
 
 EXPOSE 3000
 # .bin/next 심링크 우회 — next 실제 경로 직접 호출
