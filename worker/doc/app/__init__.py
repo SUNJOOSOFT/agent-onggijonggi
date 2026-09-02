@@ -1,0 +1,1 @@
+"""Document Worker application package."""

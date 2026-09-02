@@ -1,0 +1,80 @@
+name: doc-ogjg
+
+services:
+  document-worker:
+    build: .
+    container_name: worker-doc
+    env_file: .env
+    depends_on:
+      seaweedfs-filer:
+        condition: service_healthy
+    networks: [app-net, document-worker-net]
+    ports:
+      - "127.0.0.1:${DOCUMENT_WORKER_PORT:-8100}:8100"
+    read_only: true
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8100/health/live')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  seaweedfs-master:
+    image: chrislusf/seaweedfs:3.80
+    container_name: infra-seaweed-master
+    command: master -ip=seaweedfs-master
+    networks: [document-worker-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9333/cluster/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  seaweedfs-volume:
+    image: chrislusf/seaweedfs:3.80
+    container_name: infra-seaweed-volume
+    command: volume -ip=seaweedfs-volume -mserver=seaweedfs-master:9333 -dir=/data
+    depends_on:
+      seaweedfs-master:
+        condition: service_healthy
+    volumes:
+      - seaweed-volume:/data
+    networks: [document-worker-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://seaweedfs-volume:8080/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  seaweedfs-filer:
+    image: chrislusf/seaweedfs:3.80
+    container_name: infra-seaweed-filer
+    command: filer -ip=seaweedfs-filer -master=seaweedfs-master:9333 -defaultStoreDir=/data
+    depends_on:
+      seaweedfs-master:
+        condition: service_healthy
+      seaweedfs-volume:
+        condition: service_healthy
+    volumes:
+      - seaweed-filer:/data
+    networks: [document-worker-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://seaweedfs-filer:8888/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  app-net:
+  document-worker-net:
+    internal: true
+
+volumes:
+  seaweed-volume:
+  seaweed-filer:

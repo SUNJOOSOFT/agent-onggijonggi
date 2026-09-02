@@ -1,0 +1,34 @@
+{
+  "documentType": "DOCX",
+  "outputFormat": "DOCX",
+  "fileName": "2026-08-31_회의록.docx",
+  "title": "AX 개발팀 회의록",
+  "templateData": {},
+  "operations": [
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "회의 개요"
+    },
+    {
+      "type": "paragraph",
+      "text": "2026년 8월 31일 AX 개발 진행사항을 논의하였다."
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "주요 논의사항"
+    },
+    {
+      "type": "table",
+      "columns": ["항목", "내용", "담당"],
+      "rows": [
+        ["Document Worker", "Python 기반으로 구현", "개발팀"],
+        ["Tool Calling", "Spring AI에서 Worker 호출", "플랫폼팀"]
+      ]
+    }
+  ],
+  "metadata": {
+    "source": "meeting-minutes-v1"
+  }
+}

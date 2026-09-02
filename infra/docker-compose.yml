@@ -225,14 +225,99 @@ services:
       bff:
         condition: service_healthy
 
+  document-worker:
+    build:
+      context: ../worker/doc
+      dockerfile: Dockerfile
+    image: ogjg-worker-doc:local
+    container_name: worker-doc
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      INTERNAL_API_KEY: ${DOCUMENT_WORKER_INTERNAL_API_KEY}
+      SEAWEED_FILER_URL: http://seaweedfs-filer:8888
+      SEAWEED_ROOT_PREFIX: ${DOCUMENT_WORKER_SEAWEED_ROOT_PREFIX:-documents}
+      MAX_REQUEST_BYTES: ${DOCUMENT_WORKER_MAX_REQUEST_BYTES:-1048576}
+      MAX_OUTPUT_BYTES: ${DOCUMENT_WORKER_MAX_OUTPUT_BYTES:-26214400}
+      MAX_OPERATIONS: ${DOCUMENT_WORKER_MAX_OPERATIONS:-500}
+      RENDER_TIMEOUT_SECONDS: ${DOCUMENT_WORKER_RENDER_TIMEOUT_SECONDS:-30}
+      LOG_LEVEL: ${DOCUMENT_WORKER_LOG_LEVEL:-INFO}
+    depends_on:
+      seaweedfs-filer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8100/health/live')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-net
+      - document-worker-net
+
+  seaweedfs-master:
+    image: chrislusf/seaweedfs:3.80
+    container_name: infra-seaweed-master
+    command: master -ip=seaweedfs-master
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9333/cluster/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [document-worker-net]
+
+  seaweedfs-volume:
+    image: chrislusf/seaweedfs:3.80
+    container_name: infra-seaweed-volume
+    command: volume -ip=seaweedfs-volume -mserver=seaweedfs-master:9333 -dir=/data
+    restart: unless-stopped
+    depends_on:
+      seaweedfs-master:
+        condition: service_healthy
+    volumes:
+      - document-worker-seaweed-volume:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://seaweedfs-volume:8080/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [document-worker-net]
+
+  seaweedfs-filer:
+    image: chrislusf/seaweedfs:3.80
+    container_name: infra-seaweed-filer
+    command: filer -ip=seaweedfs-filer -master=seaweedfs-master:9333 -defaultStoreDir=/data
+    restart: unless-stopped
+    depends_on:
+      seaweedfs-master:
+        condition: service_healthy
+      seaweedfs-volume:
+        condition: service_healthy
+    volumes:
+      - document-worker-seaweed-filer:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://seaweedfs-filer:8888/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [document-worker-net]
+
 networks:
   app-net:
     driver: bridge
   proxy-net:
     external: true
+  document-worker-net:
+    internal: true
 
 volumes:
   postgres-data:
     driver: local
   caddy_data:
   caddy_config:
+  document-worker-seaweed-volume:
+  document-worker-seaweed-filer:

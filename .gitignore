@@ -181,3 +181,11 @@ infra/data/
 infra/caddy-local-root.crt
 
 .local/
+.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
+tests/artifacts/
+.DS_Store
