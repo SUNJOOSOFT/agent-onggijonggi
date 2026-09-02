@@ -2,7 +2,6 @@ package com.onggijonggi.api.chat;
 
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import java.net.URI;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -83,7 +82,7 @@ class WsOriginHandshakeTest {
 								1, message -> received.set(message.getPayloadAsText()));
 					}
 				})
-				.block(Duration.ofSeconds(5));
+				.block(WsTestTimeouts.BLOCK);
 
 		return received.get();
 	}
