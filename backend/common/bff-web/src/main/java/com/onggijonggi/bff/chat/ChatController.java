@@ -1,13 +1,11 @@
 package com.onggijonggi.bff.chat;
 
-import com.onggijonggi.bff.user.UserProvisioningService;
+import com.onggijonggi.bff.security.CurrentActor;
+import com.onggijonggi.bff.security.CurrentActorProvider;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,14 +31,14 @@ public class ChatController {
 
 	private final ChatSessRepository chatSessRepository;
 	private final ChatMsgRepository chatMsgRepository;
-	private final UserProvisioningService userProvisioningService;
+	private final CurrentActorProvider currentActorProvider;
 
 	public ChatController(ChatStreamService chatStreamService, ChatSessRepository chatSessRepository,
-			ChatMsgRepository chatMsgRepository, UserProvisioningService userProvisioningService) {
+			ChatMsgRepository chatMsgRepository, CurrentActorProvider currentActorProvider) {
 		this.chatStreamService = chatStreamService;
 		this.chatSessRepository = chatSessRepository;
 		this.chatMsgRepository = chatMsgRepository;
-		this.userProvisioningService = userProvisioningService;
+		this.currentActorProvider = currentActorProvider;
 	}
 
 	/**
@@ -108,13 +106,9 @@ public class ChatController {
 				.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));
 	}
 
-	/** JWT subject를 app_user.id(UUID)로 해석한다(PersistingChatStreamService와 동일 패턴). */
+	/** 소유권 검사에 쓰는 것은 app_user.id뿐이라 CurrentActor에서 그 값만 꺼낸다. */
 	private Mono<UUID> currentUserId() {
-		return ReactiveSecurityContextHolder.getContext()
-				.map(SecurityContext::getAuthentication)
-				.cast(JwtAuthenticationToken.class)
-				.map(jwt -> jwt.getToken().getSubject())
-				.flatMap(userProvisioningService::resolveOrProvision);
+		return currentActorProvider.currentActor().map(CurrentActor::userId);
 	}
 
 }

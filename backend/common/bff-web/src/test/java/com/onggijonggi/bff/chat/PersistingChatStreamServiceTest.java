@@ -7,7 +7,8 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.onggijonggi.bff.user.UserProvisioningService;
+import com.onggijonggi.bff.security.CurrentActor;
+import com.onggijonggi.bff.security.CurrentActorProvider;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,10 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -28,8 +25,8 @@ import reactor.test.StepVerifier;
  * Class Name : PersistingChatStreamServiceTest.java
  * Description : PersistingChatStreamService 데코레이터의 오케스트레이션(프로비저닝→세션/메시지 저장→
  *               LLM 위임→assistant 저장, 저장 실패 시 채팅은 그대로 진행)을 순수 단위 테스트로 검증한다.
- *               Spring 컨텍스트·실 DB 없이 전 의존성을 Mockito로 대체하고, JWT는
- *               ReactiveSecurityContextHolder.withAuthentication(...)로 리액터 Context에 직접 주입한다.
+ *               Spring 컨텍스트·실 DB 없이 전 의존성을 Mockito로 대체한다. 인증된 요청자는
+ *               CurrentActorProvider 스텁이 그대로 돌려주므로 리액터 Context에 JWT를 주입할 필요가 없다.
  */
 @ExtendWith(MockitoExtension.class)
 class PersistingChatStreamServiceTest {
@@ -37,7 +34,7 @@ class PersistingChatStreamServiceTest {
 	@Mock
 	private LlmChatStreamService delegate;
 	@Mock
-	private UserProvisioningService userProvisioningService;
+	private CurrentActorProvider currentActorProvider;
 	@Mock
 	private ChatSessRepository chatSessRepository;
 	@Mock
@@ -47,15 +44,7 @@ class PersistingChatStreamServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new PersistingChatStreamService(delegate, userProvisioningService, chatSessRepository, chatMsgRepository);
-	}
-
-	private static JwtAuthenticationToken authToken(String subject) {
-		Jwt jwt = Jwt.withTokenValue("test-token")
-				.header("alg", "none")
-				.claim("sub", subject)
-				.build();
-		return new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+		service = new PersistingChatStreamService(delegate, currentActorProvider, chatSessRepository, chatMsgRepository);
 	}
 
 	@Test
@@ -64,12 +53,11 @@ class PersistingChatStreamServiceTest {
 		UUID userId = UUID.randomUUID();
 		ChatStreamRequest request = new ChatStreamRequest(sessionId, "gemma", List.of(new ChatMessage("user", "안녕")));
 
-		when(userProvisioningService.resolveOrProvision("sub-1")).thenReturn(Mono.just(userId));
+		when(currentActorProvider.currentActor()).thenReturn(Mono.just(new CurrentActor(userId, "sub-1")));
 		when(chatSessRepository.findById(sessionId)).thenReturn(Optional.empty());
 		when(delegate.streamChat(request)).thenReturn(Flux.just("hi", " there"));
 
-		StepVerifier.create(service.streamChat(request)
-						.contextWrite(ReactiveSecurityContextHolder.withAuthentication(authToken("sub-1"))))
+		StepVerifier.create(service.streamChat(request))
 				.expectNext("hi", " there")
 				.verifyComplete();
 
@@ -85,12 +73,11 @@ class PersistingChatStreamServiceTest {
 		UUID userId = UUID.randomUUID();
 		ChatStreamRequest request = new ChatStreamRequest(sessionId, "gemma", List.of(new ChatMessage("user", "또 물어봄")));
 
-		when(userProvisioningService.resolveOrProvision("sub-1")).thenReturn(Mono.just(userId));
+		when(currentActorProvider.currentActor()).thenReturn(Mono.just(new CurrentActor(userId, "sub-1")));
 		when(chatSessRepository.findById(sessionId)).thenReturn(Optional.of(new ChatSess(sessionId, userId, "또 물어봄")));
 		when(delegate.streamChat(request)).thenReturn(Flux.just("ok"));
 
-		StepVerifier.create(service.streamChat(request)
-						.contextWrite(ReactiveSecurityContextHolder.withAuthentication(authToken("sub-1"))))
+		StepVerifier.create(service.streamChat(request))
 				.expectNext("ok")
 				.verifyComplete();
 
@@ -104,12 +91,11 @@ class PersistingChatStreamServiceTest {
 		UUID otherUserId = UUID.randomUUID();
 		ChatStreamRequest request = new ChatStreamRequest(sessionId, "gemma", List.of(new ChatMessage("user", "남의 세션에 끼어들기")));
 
-		when(userProvisioningService.resolveOrProvision("sub-1")).thenReturn(Mono.just(userId));
+		when(currentActorProvider.currentActor()).thenReturn(Mono.just(new CurrentActor(userId, "sub-1")));
 		when(chatSessRepository.findById(sessionId)).thenReturn(Optional.of(new ChatSess(sessionId, otherUserId, "원래 제목")));
 		when(delegate.streamChat(request)).thenReturn(Flux.just("ok"));
 
-		StepVerifier.create(service.streamChat(request)
-						.contextWrite(ReactiveSecurityContextHolder.withAuthentication(authToken("sub-1"))))
+		StepVerifier.create(service.streamChat(request))
 				.expectNext("ok")
 				.verifyComplete();
 
@@ -122,11 +108,10 @@ class PersistingChatStreamServiceTest {
 		UUID sessionId = UUID.randomUUID();
 		ChatStreamRequest request = new ChatStreamRequest(sessionId, "gemma", List.of(new ChatMessage("user", "안녕")));
 
-		when(userProvisioningService.resolveOrProvision("sub-1")).thenReturn(Mono.error(new RuntimeException("db down")));
+		when(currentActorProvider.currentActor()).thenReturn(Mono.error(new RuntimeException("db down")));
 		when(delegate.streamChat(request)).thenReturn(Flux.just("hi"));
 
-		StepVerifier.create(service.streamChat(request)
-						.contextWrite(ReactiveSecurityContextHolder.withAuthentication(authToken("sub-1"))))
+		StepVerifier.create(service.streamChat(request))
 				.expectNext("hi")
 				.verifyComplete();
 

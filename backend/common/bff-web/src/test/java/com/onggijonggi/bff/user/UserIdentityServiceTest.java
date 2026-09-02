@@ -15,12 +15,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import reactor.test.StepVerifier;
 
 /**
- * Class Name : UserProvisioningServiceTest.java
+ * Class Name : UserIdentityServiceTest.java
  * Description : JIT 프로비저닝(resolveOrProvision)의 조회/생성 분기를 순수 단위 테스트로 검증한다.
  *               Spring 컨텍스트·실 DB 없이 AppUserRepository를 Mockito로 대체한다.
  */
 @ExtendWith(MockitoExtension.class)
-class UserProvisioningServiceTest {
+class UserIdentityServiceTest {
 
 	@Mock
 	private AppUserRepository appUserRepository;
@@ -29,7 +29,7 @@ class UserProvisioningServiceTest {
 	void returnsExistingUserIdWithoutCreatingNewRow() {
 		AppUser existing = new AppUser("sub-1");
 		when(appUserRepository.findByKeycloakSubj("sub-1")).thenReturn(Optional.of(existing));
-		UserProvisioningService service = new UserProvisioningService(appUserRepository);
+		UserIdentityService service = new UserIdentityService(appUserRepository);
 
 		StepVerifier.create(service.resolveOrProvision("sub-1"))
 				.expectNext(existing.getId())
@@ -42,7 +42,7 @@ class UserProvisioningServiceTest {
 	void createsNewUserWhenNotFound() {
 		when(appUserRepository.findByKeycloakSubj("sub-2")).thenReturn(Optional.empty());
 		when(appUserRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
-		UserProvisioningService service = new UserProvisioningService(appUserRepository);
+		UserIdentityService service = new UserIdentityService(appUserRepository);
 
 		StepVerifier.create(service.resolveOrProvision("sub-2"))
 				.assertNext(id -> assertThat(id).isNotNull())
@@ -64,7 +64,7 @@ class UserProvisioningServiceTest {
 				.thenReturn(Optional.of(winner));
 		when(appUserRepository.save(any(AppUser.class)))
 				.thenThrow(new DataIntegrityViolationException("keycloak_subj unique 제약 위반"));
-		UserProvisioningService service = new UserProvisioningService(appUserRepository);
+		UserIdentityService service = new UserIdentityService(appUserRepository);
 
 		StepVerifier.create(service.resolveOrProvision("sub-3"))
 				.expectNext(winner.getId())

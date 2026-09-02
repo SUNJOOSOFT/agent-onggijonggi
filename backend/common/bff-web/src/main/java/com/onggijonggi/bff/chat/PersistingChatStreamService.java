@@ -1,14 +1,12 @@
 package com.onggijonggi.bff.chat;
 
-import com.onggijonggi.bff.user.UserProvisioningService;
+import com.onggijonggi.bff.security.CurrentActor;
+import com.onggijonggi.bff.security.CurrentActorProvider;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,38 +30,31 @@ public class PersistingChatStreamService implements ChatStreamService {
 	private static final int TITLE_MAX_LENGTH = 50;
 
 	private final LlmChatStreamService delegate;
-	private final UserProvisioningService userProvisioningService;
+	private final CurrentActorProvider currentActorProvider;
 	private final ChatSessRepository chatSessRepository;
 	private final ChatMsgRepository chatMsgRepository;
 
 	public PersistingChatStreamService(
 			LlmChatStreamService delegate,
-			UserProvisioningService userProvisioningService,
+			CurrentActorProvider currentActorProvider,
 			ChatSessRepository chatSessRepository,
 			ChatMsgRepository chatMsgRepository) {
 		this.delegate = delegate;
-		this.userProvisioningService = userProvisioningService;
+		this.currentActorProvider = currentActorProvider;
 		this.chatSessRepository = chatSessRepository;
 		this.chatMsgRepository = chatMsgRepository;
 	}
 
 	@Override
 	public Flux<String> streamChat(ChatStreamRequest request) {
-		return currentJwtSubject()
-				.flatMap(userProvisioningService::resolveOrProvision)
+		return currentActorProvider.currentActor()
+				.map(CurrentActor::userId)
 				.flatMap(userId -> persistUserTurn(request, userId))
 				.onErrorResume(e -> {
 					log.error("세션/메시지 저장 실패, 채팅은 계속 진행합니다. sessionId={}", request.sessionId(), e);
 					return Mono.just(true);
 				})
 				.flatMapMany(mayPersist -> streamAndPersistReply(request, mayPersist));
-	}
-
-	private Mono<String> currentJwtSubject() {
-		return ReactiveSecurityContextHolder.getContext()
-				.map(SecurityContext::getAuthentication)
-				.cast(JwtAuthenticationToken.class)
-				.map(jwt -> jwt.getToken().getSubject());
 	}
 
 	/**

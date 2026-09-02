@@ -7,18 +7,18 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * Class Name : UserProvisioningService.java
+ * Class Name : UserIdentityService.java
  * Description : Keycloak JWT subject를 app_user 행으로 지연(JIT) 프로비저닝한다. 회원가입 시점이 아니라
  *               첫 채팅 요청 시점에 조회하고 없으면 그 자리에서 생성한다 — Keycloak을 별도로 연동할 필요
  *               없이 매 요청마다 재확인하므로 실패해도 다음 요청에서 자연히 복구된다. JPA(블로킹)를
  *               WebFlux 요청 스레드에서 직접 부르지 않도록 boundedElastic으로 오프로딩한다.
  */
 @Service
-public class UserProvisioningService {
+public class UserIdentityService {
 
 	private final AppUserRepository appUserRepository;
 
-	public UserProvisioningService(AppUserRepository appUserRepository) {
+	public UserIdentityService(AppUserRepository appUserRepository) {
 		this.appUserRepository = appUserRepository;
 	}
 
