@@ -1,0 +1,35 @@
+plugins {
+	id 'org.springframework.boot' version '4.0.7' apply false
+	id 'io.spring.dependency-management' version '1.1.7' apply false
+}
+
+// 실행 모듈은 api 하나뿐이므로 Boot 플러그인은 api만 적용한다. common은 java-library다.
+subprojects {
+	apply plugin: 'java'
+	apply plugin: 'io.spring.dependency-management'
+
+	group = 'com.onggijonggi'
+	version = '0.0.1-SNAPSHOT'
+
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(17)
+		}
+	}
+
+	repositories {
+		mavenCentral()
+	}
+
+	// Boot 플러그인을 안 붙이는 common도 버전 없는 스타터를 쓰므로 BOM을 직접 가져온다.
+	dependencyManagement {
+		imports {
+			mavenBom 'org.springframework.boot:spring-boot-dependencies:4.0.7'
+			mavenBom 'org.springframework.ai:spring-ai-bom:2.0.0'
+		}
+	}
+
+	tasks.named('test') {
+		useJUnitPlatform()
+	}
+}

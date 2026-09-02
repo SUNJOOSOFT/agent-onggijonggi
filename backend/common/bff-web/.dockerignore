@@ -1,6 +1,0 @@
-build/
-.gradle/
-*.log
-.idea/
-# 비밀정보(gitignore 대상) — 빌드 컨텍스트에 남아있어도 이미지에 굽지 않는다.
-**/application-local.properties

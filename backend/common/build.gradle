@@ -1,0 +1,14 @@
+plugins {
+	id 'java-library'
+}
+
+// api가 그대로 쓰는 타입(Mono/Flux, Entity, JwtDecoder)이 공개 시그니처에 나오므로 api로 노출한다.
+dependencies {
+	api 'org.springframework.boot:spring-boot-starter-webflux'
+	api 'org.springframework.boot:spring-boot-starter-data-jpa'
+	api 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'io.projectreactor:reactor-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

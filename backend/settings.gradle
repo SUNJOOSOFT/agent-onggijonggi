@@ -1,0 +1,4 @@
+rootProject.name = 'onggijonggi-backend'
+
+include 'common'
+include 'api'

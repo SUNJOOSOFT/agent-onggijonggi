@@ -24,10 +24,10 @@ jobs:
       # 훅은 `--staged`(인덱스)를 읽지만 CI 체크아웃에는 스테이징된 내용이 없다.
       # 그래서 마이그레이션 파일 전체를 인자로 넘긴다.
       - name: 용어집 검사
-        run: node scripts/validate-glossary.mjs backend/common/bff-web/src/main/resources/db/migration/*.sql
+        run: node scripts/validate-glossary.mjs backend/common/src/main/resources/db/migration/*.sql
 
       - name: 설계 불변식 검사
-        run: node scripts/validate-invariants.mjs backend/common/bff-web/src/main/resources/db/migration/*.sql
+        run: node scripts/validate-invariants.mjs backend/common/src/main/resources/db/migration/*.sql
 
   # backend — 컴파일·테스트 실패를 머지 전에 막는다.
   # 이 잡이 없어서 존재하지 않는 클래스를 참조하는 코드가 그대로 머지됐고(#38),
@@ -47,13 +47,13 @@ jobs:
           cache: gradle
 
       # gradlew가 실행 권한 없이(100644) 커밋돼 있어 체크아웃 직후에는 바로 돌릴 수 없다.
-      # backend/common/bff-web/Dockerfile도 같은 이유로 chmod를 한다.
+      # backend/api/Dockerfile도 같은 이유로 chmod를 한다.
       - name: gradlew 실행 권한 부여
-        working-directory: backend/common/bff-web
+        working-directory: backend
         run: chmod +x gradlew
 
       - name: 빌드·테스트
-        working-directory: backend/common/bff-web
+        working-directory: backend
         run: ./gradlew build --no-daemon
 
   # frontend — 타입 검사가 본체다.

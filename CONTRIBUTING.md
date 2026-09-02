@@ -95,11 +95,11 @@ git checkout -b 42-session-rename upstream/main
 타입(scope): 요약
 ```
 
-타입은 `feat` `fix` `docs` `test` `chore` `refactor`, scope는 `frontend` `bff` `worker` `infra`
+타입은 `feat` `fix` `docs` `test` `chore` `refactor`, scope는 `frontend` `backend` `worker` `infra`
 `docs` `scripts` 중 하나를 쓰고 여러 곳에 걸치면 생략한다.
 
 ```
-feat(bff): 세션 이름변경 엔드포인트 추가
+feat(backend): 세션 이름변경 엔드포인트 추가
 fix(frontend): aud 클레임 없는 토큰 NPE 수정
 docs: 빠른 시작 누락 단계 보완
 ```
@@ -239,7 +239,7 @@ ollama serve
 
 ## 4. `application-local.properties`
 
-`backend/common/bff-web/src/main/resources/`에 만든다(gitignore 대상).
+`backend/api/src/main/resources/`에 만든다(gitignore 대상).
 
 ```properties
 spring.datasource.password=devpassword
@@ -258,15 +258,15 @@ spring.ai.openai.chat.options.model=gemma3:4b
 **macOS · Linux**
 
 ```bash
-cd backend/common/bff-web
-./gradlew bootRun
+cd backend
+./gradlew :api:bootRun
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-cd backend\common\bff-web
-.\gradlew.bat bootRun
+cd backend
+.\gradlew.bat :api:bootRun
 ```
 
 빈 DB라면 **최초 1회**는 스키마를 만들도록 Flyway를 켜서 띄운다 — `bootRun` 뒤에

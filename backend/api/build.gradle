@@ -1,0 +1,41 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot'
+	id 'io.spring.dependency-management'
+}
+
+dependencies {
+	implementation project(':common')
+
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
+
+	// 04·DATA — 스키마 마이그레이션(PostgreSQL + Flyway).
+	// Flyway는 JDBC로 동작하고 기동 시 1회만 돈다. 런타임 퍼시스턴스를 JPA로 갈지 R2DBC로 갈지는
+	// 아직 미결이므로 여기서는 DataSource와 Flyway만 붙이고 ORM은 넣지 않는다.
+	// Boot 4는 자동구성이 모듈로 분리돼 flyway-core만으로는 기동 시 마이그레이션이 돌지 않는다.
+	// spring-boot-flyway가 자동구성을 제공한다(없으면 조용히 아무것도 안 함 — 실제로 겪었음).
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+	implementation 'org.springframework.boot:spring-boot-flyway'
+	implementation 'org.flywaydb:flyway-core'
+	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+	runtimeOnly 'org.postgresql:postgresql'
+
+	// 03·CORE — 세션별 대화 이력 저장. ORM은 설계가 JPA/Hibernate로
+	// 명시해 JPA vs R2DBC 선택을 확정했다. WebFlux(리액티브)+JPA(블로킹) 조합은
+	// PersistingChatStreamService가 boundedElastic 오프로딩으로 다룬다.
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.boot:spring-boot-resttestclient'
+	testImplementation 'io.projectreactor:reactor-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	// JPA 붙은 뒤 테스트 컨텍스트 기동에 DataSource가 필요해져 추가(Flyway는 계속 꺼둠 — 아래 참고).
+	// Postgres 마이그레이션 SQL(uuid/jsonb 등)을 그대로 H2에 돌리면 방언 차이로 깨지므로, 스키마는
+	// Hibernate ddl-auto가 엔티티 기준으로 즉석 생성한다(스키마 정합성이 아니라 서비스 로직 검증 목적).
+	testRuntimeOnly 'com.h2database:h2'
+}

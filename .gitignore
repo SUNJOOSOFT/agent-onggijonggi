@@ -75,7 +75,7 @@ frontend/.env.local
 !.env.*.example
 
 # bff 로컬 전용 설정(API 키 등 비밀정보) — application-local.properties.example만 커밋
-backend/common/bff-web/src/main/resources/application-local.properties
+backend/api/src/main/resources/application-local.properties
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -157,13 +157,14 @@ out/
 # VSCode
 .vscode/
 
-# Java / Spring Boot (bff)
-backend/common/bff-web/target/
-backend/common/bff-web/*.class
-backend/common/bff-web/build/
-backend/common/bff-web/bin/
-backend/common/bff-web/.gradle/
-!backend/common/bff-web/gradle/wrapper/gradle-wrapper.jar
+# Java / Spring Boot (멀티모듈 — 하위 모듈 산출물까지 함께 무시한다)
+backend/**/target/
+backend/**/*.class
+backend/**/build/
+backend/**/bin/
+backend/.gradle/
+backend/**/.gradle/
+!backend/gradle/wrapper/gradle-wrapper.jar
 
 # Python (worker)
 __pycache__/

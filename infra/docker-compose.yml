@@ -146,8 +146,8 @@ services:
 
   bff:
     build:
-      context: ../backend/common/bff-web
-      dockerfile: Dockerfile
+      context: ../backend
+      dockerfile: api/Dockerfile
     image: ${BFF_IMAGE:-ogjg-chat/backend-api:local}
     container_name: backend-api
     restart: unless-stopped
