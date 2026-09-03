@@ -17,6 +17,8 @@ import tools.jackson.databind.ObjectMapper;
  *               그래서 이 필터가 이 경로의 최초이자 유일한 Origin 검사다.
  *               RateLimitWebFilter와 같은 이유로 @Component를 붙이지 않는다 — 전역 WebFilter로도
  *               등록되면 /api/ws 밖의 요청까지 이 규칙에 걸린다.
+ *               Origin 검증은 인가라기보다 CSRF 계열이지만, 이 필터도 WsSecurityConfig가 직접
+ *               만들어 꽂는 구현 세부사항이라 RateLimitWebFilter와 같이 api/auth에 둔다(이슈 #106).
  *
  *               Origin 헤더가 아예 없으면 통과시킨다. 이 검사가 실제로 방어하는 대상은 브라우저에서
  *               실행되는 남의 사이트 스크립트 하나뿐인데, 브라우저는 Origin을 반드시 붙이고 위조하지도

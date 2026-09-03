@@ -26,6 +26,9 @@ import tools.jackson.databind.ObjectMapper;
  *               카운터가 인스턴스 필드라 인스턴스가 다르면 버킷도 갈린다 — 두 체인이 한도를 나눠
  *               갖는 것은 그 성질에 기댄 의도된 설계이니, 카운터를 static이나 공용 빈으로 끌어올리면
  *               두 정책이 조용히 한 통이 된다.
+ *               레이트리밋 자체는 인증도 인가도 아니지만, SecurityConfig·WsSecurityConfig가 직접
+ *               만들어 자기 체인에 꽂는 구현 세부사항이므로 api/auth에 둔다 — 배선하는 설정과
+ *               떼어놓으면 이 의도가 보이지 않는다(이슈 #106).
  *               미인증(permitAll) 경로는 SecurityContext에 JwtAuthenticationToken이 없으므로 통과시킨다.
  *               sub 추출은 Optional&lt;String&gt; 단계에서 완결한다 — chain.filter()의 결과인 Mono&lt;Void&gt;는
  *               성공해도 onNext 없이 완료되어 "빈 Mono"와 구별되지 않으므로, 여기에 switchIfEmpty를
