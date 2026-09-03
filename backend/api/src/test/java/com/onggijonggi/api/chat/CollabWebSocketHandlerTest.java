@@ -31,6 +31,15 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Class Name : CollabWebSocketHandlerTest.java
+ * Description : 이슈 #3 — /api/ws/{threadId}의 실제 프로덕션 배선(WsSecurityConfig +
+ *               CollabWebSocketHandler)을 서브프로토콜 인증 기준으로 검증한다. 이슈 #7 스파이크가
+ *               확인했던 "인증 컨텍스트가 메시지 루프까지 전파된다"는 사실을, Authorization 헤더가
+ *               아니라 Sec-WebSocket-Protocol 조건에서 다시 확인한다.
+ *               이슈 #77이 방 단위 방송을 들이면서, 같은 방의 두 실제 클라이언트가 한 메시지를
+ *               함께 받는지와 잘못된 threadId를 거르는지도 여기서 함께 본다.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class})
