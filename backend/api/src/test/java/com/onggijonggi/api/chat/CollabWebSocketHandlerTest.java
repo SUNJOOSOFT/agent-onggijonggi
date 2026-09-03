@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
@@ -43,7 +44,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class})
+@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class, CollabRoomFixture.class})
 @ExtendWith(ThreadDumpOnStallExtension.class)
 class CollabWebSocketHandlerTest {
 
@@ -54,9 +55,12 @@ class CollabWebSocketHandlerTest {
 	@LocalServerPort
 	private int port;
 
+	@Autowired
+	private CollabRoomFixture.CollabRooms rooms;
+
 	@Test
 	void broadcastsAValidatedFrameBackToTheAuthenticatedSender() throws Exception {
-		UUID threadId = UUID.randomUUID();
+		UUID threadId = rooms.openRoom("collab-ws-user");
 		String received = exchange("collab-ws-user", threadId,
 				List.of("""
 						{"type":"chat.message","content":"hello","sessionId":"ignored","from":"ignored"}
@@ -74,7 +78,7 @@ class CollabWebSocketHandlerTest {
 
 	@Test
 	void keepsConnectionAfterMalformedFrameAndUsesDistinctTraceIds() throws Exception {
-		UUID threadId = UUID.randomUUID();
+		UUID threadId = rooms.openRoom("malformed-user");
 		List<String> received = exchange("malformed-user", threadId,
 				List.of("not-json", "{\"type\":\"chat.message\",\"content\":\"   \"}",
 						"{\"type\":\"unknown\",\"content\":\"ignored\"}",
@@ -95,7 +99,7 @@ class CollabWebSocketHandlerTest {
 
 	@Test
 	void ignoresKnownServerOnlyFrameTypes() throws Exception {
-		UUID threadId = UUID.randomUUID();
+		UUID threadId = rooms.openRoom("server-frame-user");
 		List<String> received = exchange("server-frame-user", threadId,
 				List.of("{\"type\":\"presence.join\",\"sessionId\":\"" + threadId + "\"}",
 						"{\"type\":\"chat.message\",\"content\":\"accepted\"}"), 1);
@@ -106,7 +110,7 @@ class CollabWebSocketHandlerTest {
 
 	@Test
 	void rejectsBinaryFramesWithoutClosingTheConnection() throws Exception {
-		UUID threadId = UUID.randomUUID();
+		UUID threadId = rooms.openRoom("binary-user");
 		String token = TestJwtSupport.signedJwt("binary-user", List.of("USER"));
 		List<String> received = new CopyOnWriteArrayList<>();
 
@@ -127,7 +131,7 @@ class CollabWebSocketHandlerTest {
 
 	@Test
 	void broadcastsOneMessageToTwoRealClientsInTheSameRoom() throws Exception {
-		UUID threadId = UUID.randomUUID();
+		UUID threadId = rooms.openRoom("room-user-1", "room-user-2");
 		Sinks.Many<String> firstOutbound = Sinks.many().unicast().onBackpressureBuffer();
 		Sinks.Many<String> secondOutbound = Sinks.many().unicast().onBackpressureBuffer();
 		List<String> firstReceived = new CopyOnWriteArrayList<>();
@@ -159,6 +163,37 @@ class CollabWebSocketHandlerTest {
 			first.dispose();
 			second.dispose();
 		}
+	}
+
+	@Test
+	void sendsForbiddenAndClosesNormallyWhenUserIsNotAParticipant() throws Exception {
+		UUID threadId = rooms.openRoom("room-owner-user");
+		String token = TestJwtSupport.signedJwt("outsider-user", List.of("USER"));
+		AtomicReference<String> received = new AtomicReference<>();
+		AtomicReference<CloseStatus> closeStatus = new AtomicReference<>();
+
+		new ReactorNettyWebSocketClient()
+				.execute(wsUri(threadId), allowedHeaders(), new WebSocketHandler() {
+					@Override
+					public List<String> getSubProtocols() {
+						return List.of("access_token", token);
+					}
+
+					@Override
+					public Mono<Void> handle(WebSocketSession session) {
+						return session.receive()
+								.doOnNext(message -> received.set(message.getPayloadAsText()))
+								.then(session.closeStatus().doOnNext(closeStatus::set))
+								.then();
+					}
+				})
+				.block(WsTestTimeouts.BLOCK);
+
+		ErrorFrame error = (ErrorFrame) objectMapper.readValue(received.get(), WsFrame.class);
+		assertThat(error.sessionId()).isEqualTo(threadId);
+		assertThat(error.code()).isEqualTo("FORBIDDEN");
+		// 재연결해도 같은 거부라, 프론트가 루프를 멈출 수 있게 정상 종료로 닫는다.
+		assertThat(closeStatus.get().getCode()).isEqualTo(1000);
 	}
 
 	@Test

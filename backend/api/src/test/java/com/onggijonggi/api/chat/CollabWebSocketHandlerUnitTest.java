@@ -62,7 +62,7 @@ class CollabWebSocketHandlerUnitTest {
 		when(session.send(any())).thenAnswer(invocation -> Flux.from(invocation.getArgument(0)).then());
 		when(session.close(any(CloseStatus.class))).thenReturn(Mono.empty());
 
-		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning);
+		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning, admittingMembership());
 
 		handler.handle(session).block();
 
@@ -93,7 +93,7 @@ class CollabWebSocketHandlerUnitTest {
 				.doOnNext(message -> sent.set(message.getPayloadAsText())).then());
 		when(session.close(any(CloseStatus.class))).thenReturn(Mono.empty());
 
-		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning);
+		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning, admittingMembership());
 
 		handler.handle(session).block();
 
@@ -124,7 +124,7 @@ class CollabWebSocketHandlerUnitTest {
 		when(session.send(any())).thenAnswer(invocation -> Flux.from(invocation.getArgument(0)).then());
 		when(session.close(any(CloseStatus.class))).thenReturn(Mono.empty());
 
-		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning);
+		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning, admittingMembership());
 
 		handler.handle(session).block(java.time.Duration.ofSeconds(1));
 
@@ -168,7 +168,7 @@ class CollabWebSocketHandlerUnitTest {
 			});
 		});
 
-		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning);
+		CollabWebSocketHandler handler = new CollabWebSocketHandler(new JsonMapper(), registry, provisioning, admittingMembership());
 		var handlerSubscription = handler.handle(session).subscribe();
 		try {
 			assertThat(sendSubscribed.await(1, TimeUnit.SECONDS)).isTrue();
@@ -182,6 +182,13 @@ class CollabWebSocketHandlerUnitTest {
 		} finally {
 			handlerSubscription.dispose();
 		}
+	}
+
+	/** 이 테스트들의 관심사는 메시지 루프라 인가는 통과시킨다 — 참가자 검증 자체는 통합 테스트가 맡는다. */
+	private static ThreadMembershipService admittingMembership() {
+		ThreadMembershipService membership = mock(ThreadMembershipService.class);
+		when(membership.isActiveParticipant(any(), any())).thenReturn(Mono.just(true));
+		return membership;
 	}
 
 }

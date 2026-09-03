@@ -48,11 +48,14 @@ public class CollabWebSocketHandler implements WebSocketHandler {
 
 	private final UserIdentityService userIdentityService;
 
+	private final ThreadMembershipService threadMembershipService;
+
 	public CollabWebSocketHandler(ObjectMapper objectMapper, RoomSessionRegistry roomSessionRegistry,
-			UserIdentityService userIdentityService) {
+			UserIdentityService userIdentityService, ThreadMembershipService threadMembershipService) {
 		this.objectMapper = objectMapper;
 		this.roomSessionRegistry = roomSessionRegistry;
 		this.userIdentityService = userIdentityService;
+		this.threadMembershipService = threadMembershipService;
 	}
 
 	@Override
@@ -73,7 +76,7 @@ public class CollabWebSocketHandler implements WebSocketHandler {
 				.defaultIfEmpty(new SessionInfo("EMPTY", null))
 				.flatMap(info -> userIdentityService.resolveOrProvision(info.subject())
 						.onErrorMap(UserProvisioningFailure::new)
-						.flatMap(userId -> handleRoomSession(session, threadId, userId, info.tokenExpiresAt()))
+						.flatMap(userId -> admitOrReject(session, threadId, userId, info.tokenExpiresAt()))
 						.onErrorResume(UserProvisioningFailure.class, error -> {
 							String traceId = newTraceId();
 							log.error("WebSocket user provisioning failed threadId={} traceId={}",
@@ -81,6 +84,34 @@ public class CollabWebSocketHandler implements WebSocketHandler {
 							return sendErrorAndClose(session, threadId, "INTERNAL_ERROR",
 									"WebSocket 세션을 초기화하지 못했습니다.", traceId);
 						}));
+	}
+
+	/**
+	* 참가자가 아니면 방에 넣지 않고 error 프레임으로 알린 뒤 정상 종료로 닫는다. 이 시점은 이미
+	* WebSocket으로 전환된 뒤라 HTTP 상태코드를 쓸 수 없고, 핸드셰이크 단계에서 끊으면 브라우저가
+	* 그 응답을 클라이언트에 넘기지 않아 거부인지 서버 장애인지 구분되지 않는다.
+	*/
+	private Mono<Void> admitOrReject(WebSocketSession session, UUID threadId, UUID userId,
+			Instant tokenExpiresAt) {
+		return threadMembershipService.isActiveParticipant(threadId, userId)
+				.onErrorMap(MembershipLookupFailure::new)
+				.flatMap(participant -> participant
+						? handleRoomSession(session, threadId, userId, tokenExpiresAt)
+						: rejectRoomAccess(session, threadId))
+				.onErrorResume(MembershipLookupFailure.class, error -> {
+					String traceId = newTraceId();
+					log.error("WebSocket room membership lookup failed threadId={} traceId={}",
+							threadId, traceId, error.getCause());
+					return sendErrorAndClose(session, threadId, "INTERNAL_ERROR",
+							"WebSocket 세션을 초기화하지 못했습니다.", traceId);
+				});
+	}
+
+	/** 재연결해도 같은 거부라, 클라이언트가 재연결 루프를 멈출 수 있게 사유를 실어 보낸다. */
+	private Mono<Void> rejectRoomAccess(WebSocketSession session, UUID threadId) {
+		String traceId = newTraceId();
+		log.debug("WebSocket room access denied threadId={} traceId={}", threadId, traceId);
+		return sendErrorAndClose(session, threadId, "FORBIDDEN", "이 방에 들어갈 권한이 없습니다.", traceId);
 	}
 
 	private Mono<Void> handleRoomSession(WebSocketSession session, UUID threadId, UUID userId,
@@ -219,6 +250,13 @@ public class CollabWebSocketHandler implements WebSocketHandler {
 	private static final class UserProvisioningFailure extends RuntimeException {
 
 		UserProvisioningFailure(Throwable cause) {
+			super(cause);
+		}
+	}
+
+	private static final class MembershipLookupFailure extends RuntimeException {
+
+		MembershipLookupFailure(Throwable cause) {
 			super(cause);
 		}
 	}
