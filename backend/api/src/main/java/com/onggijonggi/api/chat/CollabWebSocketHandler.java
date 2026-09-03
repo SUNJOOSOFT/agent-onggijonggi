@@ -1,8 +1,8 @@
 package com.onggijonggi.api.chat;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.onggijonggi.api.security.WsSubProtocolBearerTokenConverter;
-import com.onggijonggi.common.user.UserIdentityService;
+import com.onggijonggi.api.auth.WsSubProtocolBearerTokenConverter;
+import com.onggijonggi.api.auth.UserIdentityService;
 import java.security.Principal;
 import java.time.Duration;
 import java.time.Instant;

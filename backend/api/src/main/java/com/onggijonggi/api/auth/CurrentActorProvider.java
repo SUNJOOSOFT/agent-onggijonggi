@@ -1,6 +1,5 @@
-package com.onggijonggi.common.auth;
+package com.onggijonggi.api.auth;
 
-import com.onggijonggi.common.user.UserIdentityService;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;

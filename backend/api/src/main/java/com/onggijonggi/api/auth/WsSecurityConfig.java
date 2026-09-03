@@ -1,6 +1,5 @@
-package com.onggijonggi.api.security;
+package com.onggijonggi.api.auth;
 
-import com.onggijonggi.common.auth.IdentityProviderService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

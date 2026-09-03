@@ -7,8 +7,8 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.onggijonggi.common.auth.CurrentActor;
-import com.onggijonggi.common.auth.CurrentActorProvider;
+import com.onggijonggi.api.auth.CurrentActor;
+import com.onggijonggi.api.auth.CurrentActorProvider;
 import com.onggijonggi.common.chat.domain.ChatSess;
 import com.onggijonggi.common.chat.persistence.ChatMsgRepository;
 import com.onggijonggi.common.chat.persistence.ChatSessRepository;

@@ -2,7 +2,7 @@ package com.onggijonggi.api.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.onggijonggi.common.auth.IdentityProviderService;
+import com.onggijonggi.api.auth.IdentityProviderService;
 import java.net.URI;
 import java.security.Principal;
 import java.time.Duration;

@@ -1,4 +1,4 @@
-package com.onggijonggi.api.security;
+package com.onggijonggi.api.auth;
 
 import com.onggijonggi.api.common.ErrorResponse;
 import com.onggijonggi.api.common.TraceIdWebFilter;

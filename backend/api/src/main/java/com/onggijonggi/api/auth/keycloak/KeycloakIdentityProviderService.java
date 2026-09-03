@@ -1,6 +1,6 @@
-package com.onggijonggi.common.auth.keycloak;
+package com.onggijonggi.api.auth.keycloak;
 
-import com.onggijonggi.common.auth.IdentityProviderService;
+import com.onggijonggi.api.auth.IdentityProviderService;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;

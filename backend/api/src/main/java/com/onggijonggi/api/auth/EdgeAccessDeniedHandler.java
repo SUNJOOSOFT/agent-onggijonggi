@@ -1,4 +1,4 @@
-package com.onggijonggi.api.security;
+package com.onggijonggi.api.auth;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;

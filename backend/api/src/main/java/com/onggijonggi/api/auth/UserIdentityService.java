@@ -1,5 +1,7 @@
-package com.onggijonggi.common.user;
+package com.onggijonggi.api.auth;
 
+import com.onggijonggi.common.user.AppUser;
+import com.onggijonggi.common.user.AppUserRepository;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;

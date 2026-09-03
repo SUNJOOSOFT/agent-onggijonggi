@@ -39,7 +39,7 @@ class CollabWebSocketHandlerUnitTest {
 		UUID userId = UUID.randomUUID();
 		AtomicInteger receiveSubscriptions = new AtomicInteger();
 		RoomSessionRegistry registry = new RoomSessionRegistry();
-		var provisioning = mock(com.onggijonggi.common.user.UserIdentityService.class);
+		var provisioning = mock(com.onggijonggi.api.auth.UserIdentityService.class);
 		WebSocketSession session = mock(WebSocketSession.class);
 		HandshakeInfo handshakeInfo = mock(HandshakeInfo.class);
 		Principal principal = () -> "ws-user";
@@ -68,7 +68,7 @@ class CollabWebSocketHandlerUnitTest {
 	void sendsInternalErrorAndClosesNormallyWhenUserProvisioningFails() {
 		UUID threadId = UUID.randomUUID();
 		RoomSessionRegistry registry = new RoomSessionRegistry();
-		var provisioning = mock(com.onggijonggi.common.user.UserIdentityService.class);
+		var provisioning = mock(com.onggijonggi.api.auth.UserIdentityService.class);
 		WebSocketSession session = mock(WebSocketSession.class);
 		HandshakeInfo handshakeInfo = mock(HandshakeInfo.class);
 		Principal principal = () -> "failed-user";
@@ -100,7 +100,7 @@ class CollabWebSocketHandlerUnitTest {
 		UUID threadId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
 		RoomSessionRegistry registry = new RoomSessionRegistry();
-		var provisioning = mock(com.onggijonggi.common.user.UserIdentityService.class);
+		var provisioning = mock(com.onggijonggi.api.auth.UserIdentityService.class);
 		WebSocketSession session = mock(WebSocketSession.class);
 		HandshakeInfo handshakeInfo = mock(HandshakeInfo.class);
 		JwtAuthenticationToken authentication = mock(JwtAuthenticationToken.class);
@@ -129,7 +129,7 @@ class CollabWebSocketHandlerUnitTest {
 		UUID threadId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
 		RoomSessionRegistry registry = new RoomSessionRegistry();
-		var provisioning = mock(com.onggijonggi.common.user.UserIdentityService.class);
+		var provisioning = mock(com.onggijonggi.api.auth.UserIdentityService.class);
 		WebSocketSession session = mock(WebSocketSession.class);
 		HandshakeInfo handshakeInfo = mock(HandshakeInfo.class);
 		Principal principal = () -> "slow-user";

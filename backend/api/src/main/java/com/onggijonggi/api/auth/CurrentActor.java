@@ -1,4 +1,4 @@
-package com.onggijonggi.common.auth;
+package com.onggijonggi.api.auth;
 
 import java.util.UUID;
 

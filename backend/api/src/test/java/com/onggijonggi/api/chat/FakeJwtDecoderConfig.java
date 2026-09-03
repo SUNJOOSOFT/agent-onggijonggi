@@ -1,7 +1,7 @@
 package com.onggijonggi.api.chat;
 
-import com.onggijonggi.common.auth.IdentityProviderService;
-import com.onggijonggi.common.auth.keycloak.KeycloakIdentityProviderService;
+import com.onggijonggi.api.auth.IdentityProviderService;
+import com.onggijonggi.api.auth.keycloak.KeycloakIdentityProviderService;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;

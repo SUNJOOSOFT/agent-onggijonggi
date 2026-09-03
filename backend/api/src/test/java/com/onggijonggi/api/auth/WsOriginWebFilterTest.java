@@ -1,4 +1,4 @@
-package com.onggijonggi.api.security;
+package com.onggijonggi.api.auth;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
