@@ -12,6 +12,7 @@ import { useChat } from 'ai/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { saveModelId } from '@/app/(chat)/actions';
 import { ChatHeader } from '@/components/chat-header';
 import { LoaderIcon } from '@/components/icons';
 import {
@@ -114,6 +115,18 @@ function ChatSession({
     }));
   });
 
+  // 전송에 쓰이는 모델의 정본. prop으로 받은 selectedModelId는 쿠키에서 온 서버 렌더 값이라
+  // 초기값으로만 쓴다 — 쿠키만 갱신하면 서버 컴포넌트가 다시 렌더링되지 않아 라벨과 전송값이
+  // 갈라졌다(이슈 #94). page.tsx가 key={id}로 리마운트하므로 세션을 옮기면 쿠키 값으로 초기화된다.
+  const [modelId, setModelId] = useState(selectedModelId);
+
+  // 정본을 갱신하고, 다음 방문에 복원할 수 있도록 쿠키에도 남긴다. ChatHeader가 memo라
+  // 매 렌더 새 함수를 넘기면 memo가 무의미해지므로 useCallback으로 고정한다.
+  const handleModelChange = useCallback((nextModelId: string) => {
+    setModelId(nextModelId);
+    saveModelId(nextModelId);
+  }, []);
+
   // 스토어에 없는 id(draft, "/" 새 진입)면 세션을 만들지 않고 활성 하이라이트만 해제한다 —
   // 여기서 무조건 생성하면 새로고침마다 빈 대화가 쌓인다(실제 생성은 handleChatSubmit).
   useEffect(() => {
@@ -124,7 +137,7 @@ function ChatSession({
     } else {
       clearCurrentSession();
     }
-  }, [id, selectedModelId]);
+  }, [id]);
 
   const {
     messages,
@@ -147,7 +160,7 @@ function ChatSession({
     experimental_prepareRequestBody: ({ messages }) =>
       buildChatRequestBody({
         sessionId: id,
-        modelId: selectedModelId,
+        modelId,
         messages,
       }),
     experimental_throttle: 100,
@@ -234,7 +247,7 @@ function ChatSession({
     fetchCitations({
       sessionId: id,
       query: lastMessage.content,
-      modelId: selectedModelId,
+      modelId,
     })
       .then(({ citations, restrictedResultsOmitted }) => {
         setCitationsByMessageId((prev) => ({
@@ -253,25 +266,26 @@ function ChatSession({
           [lastMessage.id]: { status: 'error', errorMessage: message },
         }));
       });
-  }, [messages, id, selectedModelId]);
+  }, [messages, id, modelId]);
 
   // 세션은 첫 메시지를 실제로 보낼 때만 스토어에 만든다(draft 화면 새로고침으로 빈 세션이 쌓이지 않도록).
   const handleChatSubmit = useCallback<typeof handleSubmit>(
     (event, options) => {
       const { sessions, createSession } = useChatSessionsStore.getState();
       if (!sessions.some((session) => session.id === id)) {
-        createSession({ id, modelId: selectedModelId });
+        createSession({ id, modelId });
       }
       handleSubmit(event, options);
     },
-    [handleSubmit, id, selectedModelId],
+    [handleSubmit, id, modelId],
   );
 
   return (
     <div className="flex flex-col min-w-0 h-dvh bg-background">
       <ChatHeader
         availableModels={availableModels}
-        selectedModelId={selectedModelId}
+        selectedModelId={modelId}
+        onModelChange={handleModelChange}
       />
 
       <Messages

@@ -162,6 +162,10 @@ export const MultimodalInput = memo(
   (prevProps, nextProps) => {
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.isLoading !== nextProps.isLoading) return false;
+    // handleSubmit은 부모가 useCallback으로 고정하므로, 새 객체가 되는 것은 전송에 쓰이는 값이
+    // 실제로 바뀐 때뿐이다. 이걸 빼면 낡은 클로저를 계속 들고 있어 방금 바꾼 모델이 아니라
+    // 이전 모델로 요청이 나간다(이슈 #94).
+    if (prevProps.handleSubmit !== nextProps.handleSubmit) return false;
 
     return true;
   },
@@ -215,5 +219,7 @@ function PureSendButton({
 
 const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
   if (prevProps.input !== nextProps.input) return false;
+  // submitForm은 handleSubmit에 묶여 있다 — 위와 같은 이유로 함께 본다(이슈 #94).
+  if (prevProps.submitForm !== nextProps.submitForm) return false;
   return true;
 });
