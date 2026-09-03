@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -127,6 +128,8 @@ class CollabWebSocketHandlerTest {
 		CountDownLatch completed = new CountDownLatch(2);
 		AtomicReference<Throwable> failure = new AtomicReference<>();
 
+		// 두 클라이언트는 chat.message만 센다. 서버의 방 등록 순서에 따라 서로의 presence.join을
+		// 받을 수도 있는데, 이 테스트가 보는 것은 방송이라 그 프레임에 기대면 안 된다(이슈 #25).
 		Disposable first = openClient("room-user-1", threadId, firstOutbound,
 				firstReceived, ready, received, completed, failure);
 		Disposable second = openClient("room-user-2", threadId, secondOutbound,
@@ -148,6 +151,58 @@ class CollabWebSocketHandlerTest {
 			secondOutbound.tryEmitComplete();
 			first.dispose();
 			second.dispose();
+		}
+	}
+
+	@Test
+	void announcesPresenceLeaveToTheMemberStillInTheRoom() throws Exception {
+		UUID threadId = UUID.randomUUID();
+		Sinks.Many<String> stayingOutbound = Sinks.many().unicast().onBackpressureBuffer();
+		Sinks.Many<String> leavingOutbound = Sinks.many().unicast().onBackpressureBuffer();
+		List<String> stayingReceived = new CopyOnWriteArrayList<>();
+		List<String> leavingReceived = new CopyOnWriteArrayList<>();
+		CountDownLatch ready = new CountDownLatch(2);
+		CountDownLatch stayingReceivedBoth = new CountDownLatch(2);
+		CountDownLatch leavingReceivedOne = new CountDownLatch(1);
+		CountDownLatch completed = new CountDownLatch(2);
+		AtomicReference<Throwable> failure = new AtomicReference<>();
+
+		// 남는 쪽은 나가는 사람의 메시지와 퇴장 통보를 차례로 받는다. presence.join은 세지 않는다 —
+		// 서버가 언제 방에 등록하는지 클라이언트가 알 수 없어 도착 여부가 정해지지 않는다.
+		// 입장 통보 자체는 RoomSessionRegistryTest가 결정적으로 검증한다.
+		Disposable staying = openClient("presence-staying", threadId, stayingOutbound, stayingReceived,
+				ready, stayingReceivedBoth, completed, failure, 2,
+				frameTypes("chat.message", "presence.leave"));
+		Disposable leaving = openClient("presence-leaving", threadId, leavingOutbound, leavingReceived,
+				ready, leavingReceivedOne, completed, failure, 1, frameTypes("chat.message"));
+
+		try {
+			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+
+			// 이 메시지가 남는 쪽에 닿았다는 것이 곧 "둘 다 방에 등록됐다"는 증거다. 그 뒤에야
+			// 나가는 쪽을 끊어야 퇴장 통보를 받을 상대가 있다고 확신할 수 있다.
+			leavingOutbound.tryEmitNext("{\"type\":\"chat.message\",\"content\":\"before leaving\"}");
+			assertThat(leavingReceivedOne.await(5, TimeUnit.SECONDS)).isTrue();
+
+			leavingOutbound.tryEmitComplete();
+			leaving.dispose();
+
+			assertThat(stayingReceivedBoth.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(failure.get()).isNull();
+
+			ChatMessageFrame message =
+					(ChatMessageFrame) objectMapper.readValue(stayingReceived.get(0), WsFrame.class);
+			PresenceLeaveFrame left =
+					(PresenceLeaveFrame) objectMapper.readValue(stayingReceived.get(1), WsFrame.class);
+
+			assertThat(left.sessionId()).isEqualTo(threadId);
+			// 방금 말하고 나간 그 사람이다.
+			assertThat(left.userId()).isEqualTo(message.from());
+		} finally {
+			stayingOutbound.tryEmitComplete();
+			leavingOutbound.tryEmitComplete();
+			staying.dispose();
+			leaving.dispose();
 		}
 	}
 
@@ -243,20 +298,42 @@ class CollabWebSocketHandlerTest {
 	private Disposable openClient(String subject, UUID threadId, Sinks.Many<String> outbound,
 			List<String> frames, CountDownLatch ready, CountDownLatch received,
 			CountDownLatch completed, AtomicReference<Throwable> failure) {
+		return openClient(subject, threadId, outbound, frames, ready, received, completed, failure, 1,
+				frameTypes("chat.message"));
+	}
+
+	private Disposable openClient(String subject, UUID threadId, Sinks.Many<String> outbound,
+			List<String> frames, CountDownLatch ready, CountDownLatch received,
+			CountDownLatch completed, AtomicReference<Throwable> failure, long expectedFrames,
+			Predicate<WebSocketMessage> interesting) {
 		String token = TestJwtSupport.signedJwt(subject, List.of("USER"));
 		return new ReactorNettyWebSocketClient()
 				.execute(wsUri(threadId), allowedHeaders(), protocolHandler(token, session -> {
-					return WsTestExchange.exchange(session, active -> outbound.asFlux().map(active::textMessage), 1,
+					return WsTestExchange.exchange(session,
+							active -> outbound.asFlux().map(active::textMessage), expectedFrames,
 							message -> {
 								frames.add(message.getPayloadAsText());
 								received.countDown();
-							}, ready::countDown)
+							}, ready::countDown, interesting)
 							.doFinally(ignored -> outbound.tryEmitComplete())
 							.then(session.close(CloseStatus.NORMAL));
 				}))
 				.doOnError(error -> failure.compareAndSet(null, error))
 				.doFinally(ignored -> completed.countDown())
 				.subscribe();
+	}
+
+	/** 서버의 방 등록 순서를 클라이언트가 알 수 없으므로, 각 테스트는 자기가 볼 프레임만 센다. */
+	private static Predicate<WebSocketMessage> frameTypes(String... types) {
+		return message -> {
+			String payload = message.getPayloadAsText();
+			for (String type : types) {
+				if (payload.contains("\"type\":\"" + type + "\"")) {
+					return true;
+				}
+			}
+			return false;
+		};
 	}
 
 	private WebSocketHandler protocolHandler(String token,

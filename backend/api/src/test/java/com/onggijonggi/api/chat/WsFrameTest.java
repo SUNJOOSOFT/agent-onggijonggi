@@ -66,13 +66,26 @@ class WsFrameTest {
 	}
 
 	@Test
-	void allFourFrameTypesRoundTripThroughJson() throws Exception {
+	void deserializesPresenceLeaveByTypeTag() throws Exception {
+		UUID sessionId = UUID.randomUUID();
+		UUID userId = UUID.randomUUID();
+		String json = "{\"type\":\"presence.leave\",\"sessionId\":\"%s\",\"userId\":\"%s\"}"
+				.formatted(sessionId, userId);
+
+		WsFrame frame = objectMapper.readValue(json, WsFrame.class);
+
+		assertThat(frame).isEqualTo(new PresenceLeaveFrame(sessionId, userId));
+	}
+
+	@Test
+	void allFrameTypesRoundTripThroughJson() throws Exception {
 		UUID sessionId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
 		List<WsFrame> frames = List.of(
 				new ChatAnswerFrame(sessionId, "delta",
 						List.of(new Citation("doc-001", "제목", "발췌", 0.91)), false, ChatAnswerStatus.DONE),
 				new PresenceJoinFrame(sessionId, userId),
+				new PresenceLeaveFrame(sessionId, userId),
 				new ChatMessageFrame(sessionId, userId, "content"),
 				new ErrorFrame(sessionId, "FORBIDDEN", "권한이 없습니다.", "trace-1"));
 
