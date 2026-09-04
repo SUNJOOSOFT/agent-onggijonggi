@@ -162,9 +162,9 @@ export const MultimodalInput = memo(
   (prevProps, nextProps) => {
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.isLoading !== nextProps.isLoading) return false;
-    // handleSubmit은 부모가 useCallback으로 고정하므로, 새 객체가 되는 것은 전송에 쓰이는 값이
-    // 실제로 바뀐 때뿐이다. 이걸 빼면 낡은 클로저를 계속 들고 있어 방금 바꾼 모델이 아니라
-    // 이전 모델로 요청이 나간다(이슈 #94).
+    // 전송에 쓰이는 값(모델 등)은 chat.tsx가 ref로 읽으므로 낡은 클로저를 들고 있어도 정확하다.
+    // 여기 비교는 그 위의 안전망이다 — useChat 옵션이 불안정해지면 handleSubmit이 다시 매 렌더
+    // 새로 만들어지는데, 그때도 화면이 낡은 채로 남지는 않게 한다(이슈 #94).
     if (prevProps.handleSubmit !== nextProps.handleSubmit) return false;
 
     return true;
