@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.onggijonggi.api.auth.IdentityProviderService;
 import java.net.URI;
 import java.security.Principal;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -110,7 +109,7 @@ class WsSecurityContextSpikeTest {
 		client.execute(URI.create("ws://localhost:" + port + "/ws/spike"), headers,
 					session -> WsTestExchange.exchange(session, active -> Mono.just(active.textMessage("ping")), 1,
 							message -> received.set(message.getPayloadAsText())))
-				.block(Duration.ofSeconds(5));
+				.block(WsTestTimeouts.BLOCK);
 
 		assertThat(received.get()).isEqualTo("ctx=" + subject + ";handshake=" + subject);
 	}

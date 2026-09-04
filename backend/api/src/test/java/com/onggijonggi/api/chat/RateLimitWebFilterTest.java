@@ -1,11 +1,21 @@
 package com.onggijonggi.api.chat;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,31 +32,31 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 		properties = {"app.ratelimit.per-minute=2", "app.ratelimit.window-seconds=" + RateLimitWebFilterTest.WINDOW_SECONDS})
 @ActiveProfiles("test")
-@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class})
+@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class,
+		RateLimitWebFilterTest.RateLimitClockTestConfig.class})
 class RateLimitWebFilterTest {
 
 	static final int WINDOW_SECONDS = 2;
+	private static final Instant INITIAL_INSTANT = Instant.ofEpochSecond(1);
 
 	@LocalServerPort
 	private int port;
 
 	private RestTestClient restTestClient;
 
+	@Autowired
+	private MutableClock rateLimitClock;
+
 	@BeforeEach
 	void setUp() {
+		// 시계만 되돌린다 — RateLimitWebFilter.counters는 필터 빈 자체의 수명(Spring 컨텍스트
+		// 캐싱 동안 하나)이라 여기서 리셋되지 않는다. 이 클래스에 테스트를 추가할 때 같은 sub를
+		// 재사용하면, 시계는 항상 같은 INITIAL_INSTANT로 돌아가 windowIndex도 같은 값이 나오므로
+		// 카운트가 앞 테스트에서 이어져 시작하자마자 429가 난다 — 테스트마다 다른 sub를 쓴다.
+		rateLimitClock.set(INITIAL_INSTANT);
 		restTestClient = RestTestClient.bindToServer()
 				.baseUrl("http://localhost:" + port)
 				.build();
-	}
-
-	/**
-	* awaitWindowStart: 고정 윈도우(RateLimitWebFilter, 벽시계 기준 WINDOW_SECONDS초 버킷)의 경계에 요청이
-	* 걸쳐 카운트가 새 윈도우에서 재시작되는 걸 피하기 위해, 방금 시작된 새 윈도우의 맨 앞까지 대기한다.
-	*/
-	private static void awaitWindowStart() throws InterruptedException {
-		long windowMillis = WINDOW_SECONDS * 1000L;
-		long msIntoWindow = System.currentTimeMillis() % windowMillis;
-		Thread.sleep(windowMillis - msIntoWindow + 50);
 	}
 
 	private static String requestBody() {
@@ -64,10 +74,8 @@ class RateLimitWebFilterTest {
 	* 429 + Retry-After 헤더 + RATE_LIMITED 봉투가 오는지, 윈도우가 지나면 다시 200으로 리셋되는지 검증한다.
 	*/
 	@Test
-	void returnsRateLimitedAfterExceedingPerMinuteLimit() throws InterruptedException {
-		String token = "Bearer " + TestJwtSupport.signedJwt("ratelimit-user", List.of("USER"));
-
-		awaitWindowStart();
+	void returnsRateLimitedAfterExceedingPerMinuteLimit() {
+		String token = "Bearer " + TestJwtSupport.signedJwt("ratelimit-window-reset-user", List.of("USER"));
 
 		for (int i = 0; i < 2; i++) {
 			restTestClient.post()
@@ -86,11 +94,11 @@ class RateLimitWebFilterTest {
 				.body(requestBody())
 				.exchange()
 				.expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
-				.expectHeader().exists(HttpHeaders.RETRY_AFTER)
+				.expectHeader().valueEquals(HttpHeaders.RETRY_AFTER, "1")
 				.expectBody()
 				.jsonPath("$.error.code").isEqualTo("RATE_LIMITED");
 
-		Thread.sleep(2_100);
+		rateLimitClock.advance(Duration.ofSeconds(1));
 
 		restTestClient.post()
 				.uri("/api/chat/stream")
@@ -99,6 +107,56 @@ class RateLimitWebFilterTest {
 				.body(requestBody())
 				.exchange()
 				.expectStatus().isOk();
+	}
+
+	/** 레이트리밋이 읽는 Clock 빈을 가변 테스트 Clock으로 갈아끼운다. */
+	@TestConfiguration
+	static class RateLimitClockTestConfig {
+
+		@Bean
+		@Primary
+		MutableClock mutableRateLimitClock() {
+			return new MutableClock(INITIAL_INSTANT, ZoneOffset.UTC);
+		}
+	}
+
+	/** {@code Clock.fixed}는 불변이라 전진시킬 수 없어, 윈도우 리셋 검증에 쓸 전진 가능한 Clock을 직접 만든다. */
+	static final class MutableClock extends Clock {
+
+		private final AtomicReference<Instant> instant;
+		private final ZoneId zone;
+
+		MutableClock(Instant initialInstant, ZoneId zone) {
+			this(new AtomicReference<>(initialInstant), zone);
+		}
+
+		private MutableClock(AtomicReference<Instant> instant, ZoneId zone) {
+			this.instant = instant;
+			this.zone = zone;
+		}
+
+		@Override
+		public ZoneId getZone() {
+			return zone;
+		}
+
+		@Override
+		public Clock withZone(ZoneId newZone) {
+			return zone.equals(newZone) ? this : new MutableClock(instant, newZone);
+		}
+
+		@Override
+		public Instant instant() {
+			return instant.get();
+		}
+
+		void set(Instant newInstant) {
+			instant.set(newInstant);
+		}
+
+		void advance(Duration duration) {
+			instant.updateAndGet(current -> current.plus(duration));
+		}
 	}
 
 }

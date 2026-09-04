@@ -1,5 +1,6 @@
 package com.onggijonggi.api.auth;
 
+import java.time.Clock;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +36,7 @@ public class WsSecurityConfig {
 	private final EdgeAccessDeniedHandler accessDeniedHandler;
 	private final IdentityProviderService identityProviderService;
 	private final ObjectMapper objectMapper;
+	private final Clock rateLimitClock;
 
 	/** HTTP CORS와 같은 화이트리스트를 쓴다 — 프론트 오리진은 하나뿐이라 값이 두 곳으로 갈리는 편이 더 위험하다. */
 	@Value("${app.cors.allowed-origins}")
@@ -50,11 +52,12 @@ public class WsSecurityConfig {
 
 	public WsSecurityConfig(EdgeAuthenticationEntryPoint authenticationEntryPoint,
 			EdgeAccessDeniedHandler accessDeniedHandler, IdentityProviderService identityProviderService,
-			ObjectMapper objectMapper) {
+			ObjectMapper objectMapper, Clock rateLimitClock) {
 		this.authenticationEntryPoint = authenticationEntryPoint;
 		this.accessDeniedHandler = accessDeniedHandler;
 		this.identityProviderService = identityProviderService;
 		this.objectMapper = objectMapper;
+		this.rateLimitClock = rateLimitClock;
 	}
 
 	/**
@@ -97,7 +100,8 @@ public class WsSecurityConfig {
 				.exceptionHandling(handling -> handling
 						.authenticationEntryPoint(authenticationEntryPoint)
 						.accessDeniedHandler(accessDeniedHandler))
-				.addFilterAfter(new RateLimitWebFilter(objectMapper, rateLimitWindowSeconds, wsHandshakePerMinute),
+				.addFilterAfter(new RateLimitWebFilter(objectMapper, rateLimitClock, rateLimitWindowSeconds,
+						wsHandshakePerMinute),
 						SecurityWebFiltersOrder.AUTHORIZATION)
 				.build();
 	}

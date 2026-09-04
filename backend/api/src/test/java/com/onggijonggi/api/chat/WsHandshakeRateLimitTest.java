@@ -2,7 +2,6 @@ package com.onggijonggi.api.chat;
 
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import java.net.URI;
-import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -157,7 +156,7 @@ class WsHandshakeRateLimitTest {
 						return session.close(CloseStatus.NORMAL);
 					}
 				})
-				.block(Duration.ofSeconds(5));
+				.block(WsTestTimeouts.BLOCK);
 	}
 
 }

@@ -31,6 +31,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Class Name : CollabWebSocketHandlerUnitTest.java
+ * Description : `WebSocketSession`을 mock으로 대체해 `CollabWebSocketHandler`의 구독·종료
+ *               경로만 좁게 검증한다. receive/send가 정확히 한 번씩만 구독되는지, 사용자
+ *               프로비저닝 실패 시 INTERNAL_ERROR 후 정상 종료하는지, JWT 만료 시 4000으로,
+ *               느린 소비자의 outbound 버퍼가 넘칠 때 1011로 닫는지를 실제 소켓 없이 확인한다.
+ */
 class CollabWebSocketHandlerUnitTest {
 
 	@Test

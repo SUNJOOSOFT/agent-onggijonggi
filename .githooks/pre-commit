@@ -25,3 +25,9 @@ if ! node scripts/validate-invariants.mjs --staged; then
 	echo "             불변식 목록: scripts/validate-invariants.mjs 상단 주석" >&2
 	exit 1
 fi
+
+if ! node scripts/validate-java-class-header.mjs --staged; then
+	echo "" >&2
+	echo "[pre-commit] 커밋을 중단했습니다. CONTRIBUTING.md의 자바 클래스 헤더 형식을 추가하세요." >&2
+	exit 1
+fi
