@@ -1,6 +1,6 @@
 package com.onggijonggi.api.auth;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,11 +42,13 @@ final class RateLimitWebFilter implements WebFilter {
 
 	private final ConcurrentHashMap<String, Window> counters = new ConcurrentHashMap<>();
 	private final ObjectMapper objectMapper;
+	private final Clock clock;
 	private final long windowSeconds;
 	private final int limit;
 
-	RateLimitWebFilter(ObjectMapper objectMapper, long windowSeconds, int limit) {
+	RateLimitWebFilter(ObjectMapper objectMapper, Clock clock, long windowSeconds, int limit) {
 		this.objectMapper = objectMapper;
+		this.clock = clock;
 		this.windowSeconds = windowSeconds;
 		this.limit = limit;
 	}
@@ -71,7 +73,7 @@ final class RateLimitWebFilter implements WebFilter {
 	}
 
 	private Mono<Void> applyLimit(ServerWebExchange exchange, WebFilterChain chain, String sub) {
-		long now = Instant.now().getEpochSecond();
+		long now = clock.instant().getEpochSecond();
 		long windowIndex = now / windowSeconds;
 		Window window = counters.compute(sub, (key, existing) -> {
 			if (existing == null || existing.windowIndex() != windowIndex) {

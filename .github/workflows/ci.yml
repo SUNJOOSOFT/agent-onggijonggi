@@ -64,6 +64,17 @@ jobs:
         working-directory: backend
         run: ./gradlew build --no-daemon
 
+      # ThreadDumpOnStallExtension(이슈 #107)이 실패한 테스트에 한해서만 남기는 스레드 덤프.
+      # 평소엔 디렉터리 자체가 안 생기므로 if-no-files-found: ignore로 조용히 건너뛴다.
+      - name: 스레드 덤프 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: thread-dumps
+          path: backend/api/build/test-results/thread-dumps/
+          if-no-files-found: ignore
+          retention-days: 7
+
   # frontend — 타입 검사가 본체다.
   # #38 같은 "존재하지 않는 것을 참조" 부류는 biome 린트가 잡지 못하고 tsc가 잡는다.
   # 린트는 그다음 순서로 돌린다(형식·규칙 위반은 성격이 다른 문제라 원인 파악이 쉬워진다).

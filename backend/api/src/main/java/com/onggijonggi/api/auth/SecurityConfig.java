@@ -1,5 +1,6 @@
 package com.onggijonggi.api.auth;
 
+import java.time.Clock;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -29,6 +30,7 @@ public class SecurityConfig {
 	private final EdgeAccessDeniedHandler accessDeniedHandler;
 	private final ObjectMapper objectMapper;
 	private final IdentityProviderService identityProviderService;
+	private final Clock rateLimitClock;
 
 	@Value("${app.cors.allowed-origins}")
 	private List<String> allowedOrigins;
@@ -41,11 +43,12 @@ public class SecurityConfig {
 
 	public SecurityConfig(EdgeAuthenticationEntryPoint authenticationEntryPoint,
 			EdgeAccessDeniedHandler accessDeniedHandler, ObjectMapper objectMapper,
-			IdentityProviderService identityProviderService) {
+			IdentityProviderService identityProviderService, Clock rateLimitClock) {
 		this.authenticationEntryPoint = authenticationEntryPoint;
 		this.accessDeniedHandler = accessDeniedHandler;
 		this.objectMapper = objectMapper;
 		this.identityProviderService = identityProviderService;
+		this.rateLimitClock = rateLimitClock;
 	}
 
 	/**
@@ -76,7 +79,7 @@ public class SecurityConfig {
 	}
 
 	private RateLimitWebFilter rateLimitWebFilter() {
-		return new RateLimitWebFilter(objectMapper, rateLimitWindowSeconds, rateLimitPerMinute);
+		return new RateLimitWebFilter(objectMapper, rateLimitClock, rateLimitWindowSeconds, rateLimitPerMinute);
 	}
 
 	private CorsConfigurationSource corsConfigurationSource() {
