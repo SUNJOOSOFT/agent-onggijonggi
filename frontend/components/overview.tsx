@@ -23,6 +23,7 @@ export const Overview = () => {
           <span>+</span>
           <MessageIcon size={32} />
         </p>
+        <p>옹기종기는 LiteLLM 게이트웨이로 여러 모델에 붙는 AI 챗봇입니다.</p>
         <p>
           로그인 후 질문을 입력하면 답변과 함께 근거 문서를 근거 패널로
           보여드립니다.

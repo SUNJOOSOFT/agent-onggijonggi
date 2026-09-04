@@ -23,9 +23,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 function PureChatHeader({
   availableModels,
   selectedModelId,
+  onModelChange,
 }: {
   availableModels: string[];
   selectedModelId: string;
+  onModelChange: (modelId: string) => void;
 }) {
   const router = useRouter();
   const { open } = useSidebar();
@@ -58,6 +60,7 @@ function PureChatHeader({
       <ModelSelector
         availableModels={availableModels}
         selectedModelId={selectedModelId}
+        onModelChange={onModelChange}
         className="order-1 md:order-2"
       />
 

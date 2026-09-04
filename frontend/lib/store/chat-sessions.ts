@@ -151,8 +151,8 @@ export const useChatSessionsStore = create<ChatSessionsState>()(
               return {
                 id: server.id,
                 title: local?.titleCustomized ? local.title : server.title,
-                // 서버 응답에는 모델이 없다. 로컬 기록이 없으면 비워둔다 — 이 값은 기록용이고,
-                // 실제 전송에 쓰이는 모델은 화면이 page.tsx에서 받은 selectedModelId다.
+                // 서버 응답에는 모델이 없다. 로컬 기록이 없으면 비워둔다 — 이 값은 세션을 만든
+                // 시점의 기록일 뿐이고, 실제 전송에 쓰이는 모델은 chat.tsx가 쥔 modelId 상태다.
                 modelId: local?.modelId ?? '',
                 messages: local?.messages ?? [],
                 createdAt: new Date(server.createdAt).getTime(),

@@ -1,6 +1,12 @@
 # onggijonggi-chat
 
-**LiteLLM 게이트웨이 기반 AI 챗봇.** 어떤 모델을 쓸지는 설정 파일 한 곳에서 정한다 — 상용 API(OpenAI·Anthropic 등)든, 직접 띄운 로컬 모델(Ollama·vLLM)이든 같은 방식으로 붙는다.
+**사람과 AI가 한 대화에 옹기종기.** 옹기종기는 비개발 직군을 포함한 여러 구성원과 여러 AI 에이전트가 하나의 대화 맥락을 공유하며 협업할 수 있는 환경을 지향하는 오픈소스 사내 업무용 LLM 에이전트 솔루션이다.
+
+한 구성원이 업무 질문을 올리면 권한이 있는 동료가 정보와 판단을 보태고, 필요한 AI 에이전트가 맡은 역할에 맞게 기여한다. 뒤이어 참여하는 사람과 AI는 앞서 오간 설명과 결정을 같은 대화에서 확인하고 그 맥락을 이어받는다. 조직별 데이터와 권한의 경계는 그대로 유지한다.
+
+**현재 공개본은** Keycloak 인증, 모델 게이트웨이, 개인별 대화 저장을 제공하는 셀프호스트 AI 채팅 기반이다. 어떤 모델을 쓸지는 설정 파일 한 곳에서 정한다 — 상용 API(OpenAI·Anthropic 등)든, 직접 띄운 로컬 모델(Ollama·vLLM)이든 같은 방식으로 붙는다.
+
+여러 사람과 여러 AI가 하나의 대화를 공유하는 협업과 조직별 데이터·권한 격리는 **앞으로 만들어 간다** — 지금 무엇이 되고 다음이 무엇인지는 [ROADMAP](ROADMAP.md)에 있다.
 
 - 🔐 **Keycloak(OIDC) 로그인** + JWT 검증 · 역할 기반 접근 제어 · 분당 요청 제한
 - 💬 **스트리밍 채팅** — 응답이 생성되는 대로 출력, 대화 이력은 DB에 저장
@@ -79,7 +85,7 @@ docker compose up -d --build                   # ③ 전체 기동 (첫 빌드 5
 
 ## 라이선스
 
-Copyright 2026 SUNJOOSOFT. 이 저장소는 [Apache License 2.0](LICENSE)을 따른다.
+Copyright 2026 [SUNJOOSOFT](http://sunjoosoft.com/). 이 저장소는 [Apache License 2.0](LICENSE)을 따른다.
 
 ### `frontend/` — Vercel ai-chatbot 포크
 

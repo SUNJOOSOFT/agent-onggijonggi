@@ -5,6 +5,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
@@ -31,13 +32,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class})
+@Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class, CollabRoomFixture.class})
 class WsOriginHandshakeTest {
 
 	private static final String ALLOWED_ORIGIN = "http://localhost:3000";
 
 	@LocalServerPort
 	private int port;
+
+	@Autowired
+	private CollabRoomFixture.CollabRooms rooms;
 
 	@Test
 	void acceptsHandshakeWhenOriginIsWhitelisted() {
@@ -66,7 +70,7 @@ class WsOriginHandshakeTest {
 		AtomicReference<String> received = new AtomicReference<>();
 
 		new ReactorNettyWebSocketClient()
-				.execute(URI.create("ws://localhost:" + port + "/api/ws/" + java.util.UUID.randomUUID()),
+				.execute(URI.create("ws://localhost:" + port + "/api/ws/" + rooms.openRoom("origin-allowed-user")),
 						headers, new WebSocketHandler() {
 
 					@Override

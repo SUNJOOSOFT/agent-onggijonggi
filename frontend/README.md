@@ -1,6 +1,6 @@
 # frontend — Next.js 채팅 UI
 
-Keycloak 로그인이 붙은 채팅 화면. 브라우저는 BFF(`backend/api/`)만 호출하고, 게이트웨이·모델 자격증명은 노출되지 않는다.
+옹기종기는 사람과 AI가 한 대화에서 협업하는 것을 지향하는 오픈소스 LLM 에이전트 솔루션이다. 이 디렉터리는 그 채팅 UI다 — Keycloak 로그인이 붙어 있고, 브라우저는 BFF(`backend/api/`)만 호출하며, 게이트웨이·모델 자격증명은 노출되지 않는다.
 
 - [Next.js](https://nextjs.org) App Router — React Server Components·Server Actions
 - [AI SDK](https://sdk.vercel.ai/docs) `useChat` — `streamProtocol: 'text'`로 BFF의 프레이밍 없는 텍스트 스트림을 소비한다

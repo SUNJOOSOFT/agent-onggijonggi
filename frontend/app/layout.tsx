@@ -15,7 +15,8 @@ export const metadata: Metadata = {
   // 셀프 호스팅이라 고정 도메인이 없어 NEXTAUTH_URL을 쓰고, 없으면 로컬 기본 포트로 폴백한다.
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
   title: 'onggijonggi-chat',
-  description: 'LiteLLM 게이트웨이 기반 AI 챗봇.',
+  description:
+    '옹기종기는 비개발 직군을 포함한 여러 구성원과 여러 AI 에이전트가 하나의 대화 맥락을 공유하며 협업할 수 있는 환경을 지향하는 오픈소스 사내 업무용 LLM 에이전트 솔루션이다.',
 };
 
 const LIGHT_THEME_COLOR = 'hsl(0 0% 100%)';

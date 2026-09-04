@@ -162,6 +162,10 @@ export const MultimodalInput = memo(
   (prevProps, nextProps) => {
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.isLoading !== nextProps.isLoading) return false;
+    // 전송에 쓰이는 값(모델 등)은 chat.tsx가 ref로 읽으므로 낡은 클로저를 들고 있어도 정확하다.
+    // 여기 비교는 그 위의 안전망이다 — useChat 옵션이 불안정해지면 handleSubmit이 다시 매 렌더
+    // 새로 만들어지는데, 그때도 화면이 낡은 채로 남지는 않게 한다(이슈 #94).
+    if (prevProps.handleSubmit !== nextProps.handleSubmit) return false;
 
     return true;
   },
@@ -215,5 +219,7 @@ function PureSendButton({
 
 const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
   if (prevProps.input !== nextProps.input) return false;
+  // submitForm은 handleSubmit에 묶여 있다 — 위와 같은 이유로 함께 본다(이슈 #94).
+  if (prevProps.submitForm !== nextProps.submitForm) return false;
   return true;
 });
