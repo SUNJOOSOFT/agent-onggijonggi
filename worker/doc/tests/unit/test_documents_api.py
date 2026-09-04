@@ -36,7 +36,7 @@ class FakeDocumentService:
 def test_documents_endpoint_returns_created_metadata(monkeypatch) -> None:
     monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
     app.dependency_overrides[get_document_service] = lambda: FakeDocumentService()
-    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text())
+    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text(encoding="utf-8"))
 
     response = TestClient(app).post(
         "/api/v1/documents",
@@ -57,7 +57,7 @@ def test_documents_endpoint_returns_created_metadata(monkeypatch) -> None:
 
 def test_documents_endpoint_returns_standard_validation_error(monkeypatch) -> None:
     monkeypatch.setenv("INTERNAL_API_KEY", "test-key")
-    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text())
+    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text(encoding="utf-8"))
     payload["templateId"] = "not-allowed"
 
     response = TestClient(app).post(

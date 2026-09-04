@@ -8,7 +8,7 @@ from app.renderers.docx import DocxRenderer
 
 
 def test_docx_renderer_creates_readable_document(tmp_path: Path) -> None:
-    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text())
+    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text(encoding="utf-8"))
     rendered = DocxRenderer().render(DocumentRequest.model_validate(payload), tmp_path)
 
     document = Document(rendered.path)

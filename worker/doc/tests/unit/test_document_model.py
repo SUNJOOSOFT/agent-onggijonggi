@@ -9,7 +9,7 @@ from app.models.document import DocumentRequest
 
 def load_example_request() -> dict[str, object]:
     path = Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json"
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def test_test_json_matches_document_request_contract() -> None:

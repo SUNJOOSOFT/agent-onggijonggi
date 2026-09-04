@@ -6,7 +6,7 @@ from app.renderers.markdown import MARKDOWN_CONTENT_TYPE, MarkdownRenderer
 
 
 def test_markdown_renderer_creates_markdown_from_document_dsl(tmp_path: Path) -> None:
-    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text())
+    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text(encoding="utf-8"))
     payload["outputFormat"] = "MD"
     payload["fileName"] = "meeting-minutes.md"
 

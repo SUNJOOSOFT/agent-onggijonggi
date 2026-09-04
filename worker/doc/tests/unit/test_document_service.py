@@ -33,7 +33,7 @@ class FakePdfConverter:
 
 
 def test_document_service_uploads_docx_and_cleans_temporary_file() -> None:
-    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text())
+    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text(encoding="utf-8"))
     storage = FakeStorage()
     service = DocumentService(
         Settings(internal_api_key="test-key", seaweed_root_prefix="documents"),
@@ -53,7 +53,7 @@ def test_document_service_uploads_docx_and_cleans_temporary_file() -> None:
 
 
 def test_document_service_converts_docx_to_pdf() -> None:
-    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text())
+    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text(encoding="utf-8"))
     payload["outputFormat"] = "PDF"
     payload["fileName"] = "2026-08-31_회의록.pdf"
     storage = FakeStorage()
@@ -72,7 +72,7 @@ def test_document_service_converts_docx_to_pdf() -> None:
 
 
 def test_document_service_generates_markdown() -> None:
-    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text())
+    payload = json.loads((Path(__file__).parents[1] / "fixtures" / "meeting-minutes.json").read_text(encoding="utf-8"))
     payload["outputFormat"] = "MD"
     payload["fileName"] = "2026-08-31_회의록.md"
     storage = FakeStorage()
