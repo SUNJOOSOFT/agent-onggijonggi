@@ -23,7 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  *               구독자에게만(다른 방은 제외) 방송되는지, 동시 방송이 모든 구독자에게 같은
  *               순서로 도달하는지, 느린 연결의 outbound 버퍼가 넘쳐도 그 연결만 신호를 받고
  *               다른 연결은 영향받지 않는지, 마지막 멤버가 나간 뒤 새 방 상태가 정상 동작하는지
- *               확인한다.
+ *               확인한다. 입퇴장 통보(이슈 #25)는 연결이 아니라 사용자 단위라, 한 사람이 탭을
+ *               여럿 열었을 때 통보가 새지 않는지도 함께 본다.
  */
 class RoomSessionRegistryTest {
 
@@ -208,6 +209,58 @@ class RoomSessionRegistryTest {
 
 		assertThat(received).isEmpty();
 		subscription.dispose();
+	}
+
+	@Test
+	void doesNotAnnounceJoinForTheSameUsersSecondConnection() {
+		UUID roomId = UUID.randomUUID();
+		UUID twoTabUserId = UUID.randomUUID();
+		UUID firstTabId = UUID.randomUUID();
+		List<WsFrame> watcher = new CopyOnWriteArrayList<>();
+
+		Disposable watcherSubscription = registry.join(roomId, UUID.randomUUID(), UUID.randomUUID())
+				.subscribe(watcher::add);
+		Disposable firstTab = registry.join(roomId, firstTabId, twoTabUserId).subscribe();
+		watcher.clear();
+
+		Disposable secondTab = registry.join(roomId, UUID.randomUUID(), twoTabUserId).subscribe();
+
+		// 이미 방에 있는 사람이 탭을 하나 더 연 것은 입장이 아니다.
+		assertThat(watcher).isEmpty();
+
+		watcherSubscription.dispose();
+		firstTab.dispose();
+		secondTab.dispose();
+	}
+
+	@Test
+	void announcesLeaveOnlyWhenTheSameUsersLastConnectionGoes() {
+		UUID roomId = UUID.randomUUID();
+		UUID twoTabUserId = UUID.randomUUID();
+		UUID firstTabId = UUID.randomUUID();
+		UUID secondTabId = UUID.randomUUID();
+		List<WsFrame> watcher = new CopyOnWriteArrayList<>();
+
+		Disposable watcherSubscription = registry.join(roomId, UUID.randomUUID(), UUID.randomUUID())
+				.subscribe(watcher::add);
+		Disposable firstTab = registry.join(roomId, firstTabId, twoTabUserId).subscribe();
+		Disposable secondTab = registry.join(roomId, secondTabId, twoTabUserId).subscribe();
+		watcher.clear();
+
+		registry.leave(roomId, secondTabId, twoTabUserId);
+
+		// 탭 하나가 닫혀도 다른 탭이 남아 있으면 그 사람은 아직 방에 있다. 재연결도 같은 모양이다 —
+		// 새 연결이 먼저 등록되고 죽은 옛 연결의 doFinally가 뒤늦게 도는 순서라, 여기서 통보가
+		// 나가면 남은 사람 목록에서 그 사람이 사라진 채로 남는다.
+		assertThat(watcher).isEmpty();
+
+		registry.leave(roomId, firstTabId, twoTabUserId);
+
+		assertThat(watcher).containsExactly(new PresenceLeaveFrame(roomId, twoTabUserId));
+
+		watcherSubscription.dispose();
+		firstTab.dispose();
+		secondTab.dispose();
 	}
 
 	private void broadcastRange(UUID roomId, String prefix, CountDownLatch start) {

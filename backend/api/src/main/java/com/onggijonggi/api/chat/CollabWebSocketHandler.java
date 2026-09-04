@@ -40,7 +40,7 @@ public class CollabWebSocketHandler implements WebSocketHandler {
 
 	private static final CloseStatus SLOW_CONSUMER = new CloseStatus(1011, "outbound buffer overflow");
 
-	private static final Set<String> SERVER_ONLY_TYPES = Set.of("chat.answer", "presence.join", "error");
+	private static final Set<String> SERVER_ONLY_TYPES = Set.of("chat.answer", "presence.join", "presence.leave", "error");
 
 	private final ObjectMapper objectMapper;
 

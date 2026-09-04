@@ -103,6 +103,7 @@ class CollabWebSocketHandlerTest {
 		UUID threadId = rooms.openRoom("server-frame-user");
 		List<String> received = exchange("server-frame-user", threadId,
 				List.of("{\"type\":\"presence.join\",\"sessionId\":\"" + threadId + "\"}",
+						"{\"type\":\"presence.leave\",\"sessionId\":\"" + threadId + "\"}",
 						"{\"type\":\"chat.message\",\"content\":\"accepted\"}"), 1);
 
 		ChatMessageFrame frame = (ChatMessageFrame) objectMapper.readValue(received.get(0), WsFrame.class);
