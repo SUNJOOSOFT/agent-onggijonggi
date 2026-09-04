@@ -17,6 +17,14 @@ import reactor.core.publisher.Sinks;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Class Name : RoomSessionRegistryTest.java
+ * Description : 방 단위 in-memory 방송(`RoomSessionRegistry`, 이슈 #16)을 검증한다. 같은 방
+ *               구독자에게만(다른 방은 제외) 방송되는지, 동시 방송이 모든 구독자에게 같은
+ *               순서로 도달하는지, 느린 연결의 outbound 버퍼가 넘쳐도 그 연결만 신호를 받고
+ *               다른 연결은 영향받지 않는지, 마지막 멤버가 나간 뒤 새 방 상태가 정상 동작하는지
+ *               확인한다.
+ */
 class RoomSessionRegistryTest {
 
 	private final RoomSessionRegistry registry = new RoomSessionRegistry();

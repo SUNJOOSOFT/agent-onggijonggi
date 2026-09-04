@@ -6,10 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 마이그레이션 SQL의 DB 식별자·설계 불변식 검사.
-  # .githooks/pre-commit이 커밋 시점에 돌리는 것과 같은 스크립트를 쓴다 — 판정이 갈리지 않게.
-  # 훅을 설치하지 않았거나(`git config core.hooksPath .githooks`) 우회한 커밋은 여기서 걸린다.
-  migration-sql:
+  # .githooks/pre-commit이 커밋 시점에 돌리는 것과 같은 Node 검사들 — 마이그레이션 SQL의
+  # DB 식별자·설계 불변식, 그리고 자바 클래스 헤더. 판정이 갈리지 않게 훅과 같은 스크립트를
+  # 쓴다. 훅을 설치하지 않았거나(`git config core.hooksPath .githooks`) 우회한 커밋은
+  # 여기서 걸린다. 검사 자체가 가벼워서(수 초) 잡을 나누지 않는다 — 나누면 러너마다
+  # checkout·Node 설치에 20~30초를 더 쓰게 된다.
+  static-checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +30,12 @@ jobs:
 
       - name: 설계 불변식 검사
         run: node scripts/validate-invariants.mjs backend/common/src/main/resources/db/migration/*.sql
+
+      - name: 자바 클래스 헤더 검사 테스트
+        run: node --test scripts/validate-java-class-header.test.mjs
+
+      - name: 자바 클래스 헤더 검사
+        run: node scripts/validate-java-class-header.mjs --tracked
 
   # backend — 컴파일·테스트 실패를 머지 전에 막는다.
   # 이 잡이 없어서 존재하지 않는 클래스를 참조하는 코드가 그대로 머지됐고(#38),
