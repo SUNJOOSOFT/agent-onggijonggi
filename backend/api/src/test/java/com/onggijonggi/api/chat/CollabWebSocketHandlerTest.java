@@ -2,7 +2,6 @@ package com.onggijonggi.api.chat;
 
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import java.net.URI;
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -32,6 +31,15 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Class Name : CollabWebSocketHandlerTest.java
+ * Description : 이슈 #3 — /api/ws/{threadId}의 실제 프로덕션 배선(WsSecurityConfig +
+ *               CollabWebSocketHandler)을 서브프로토콜 인증 기준으로 검증한다. 이슈 #7 스파이크가
+ *               확인했던 "인증 컨텍스트가 메시지 루프까지 전파된다"는 사실을, Authorization 헤더가
+ *               아니라 Sec-WebSocket-Protocol 조건에서 다시 확인한다.
+ *               이슈 #16이 방 단위 방송을 들이면서, 같은 방의 두 실제 클라이언트가 한 메시지를
+ *               함께 받는지와 잘못된 threadId를 거르는지도 여기서 함께 본다.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import({ChatControllerTest.FakeChatModelConfig.class, FakeJwtDecoderConfig.class})
@@ -107,7 +115,7 @@ class CollabWebSocketHandlerTest {
 							active.textMessage("{\"type\":\"chat.message\",\"content\":\"after binary\"}")),
 							2, message -> received.add(message.getPayloadAsText()));
 				}))
-				.block(Duration.ofSeconds(5));
+				.block(WsTestTimeouts.BLOCK);
 
 		ErrorFrame error = (ErrorFrame) objectMapper.readValue(received.get(0), WsFrame.class);
 		ChatMessageFrame valid = (ChatMessageFrame) objectMapper.readValue(received.get(1), WsFrame.class);
@@ -173,7 +181,7 @@ class CollabWebSocketHandlerTest {
 								.then();
 					}
 				})
-				.block(Duration.ofSeconds(5));
+				.block(WsTestTimeouts.BLOCK);
 
 		ErrorFrame error = (ErrorFrame) objectMapper.readValue(received.get(), WsFrame.class);
 		assertThat(error.sessionId()).isNull();
@@ -200,7 +208,7 @@ class CollabWebSocketHandlerTest {
 				return Mono.when(session.receive().then(),
 						session.close(), session.closeStatus().doOnNext(closeStatus::set).then());
 			}
-		}).block(Duration.ofSeconds(5));
+		}).block(WsTestTimeouts.BLOCK);
 
 		assertThat(closeStatus.get().getCode()).isEqualTo(1000);
 	}
@@ -210,18 +218,18 @@ class CollabWebSocketHandlerTest {
 		ReactorNettyWebSocketClient client = new ReactorNettyWebSocketClient();
 
 		assertThatThrownBy(() -> client.execute(wsUri(UUID.randomUUID()), allowedHeaders(), session -> Mono.empty())
-				.block(Duration.ofSeconds(5)))
+				.block(WsTestTimeouts.BLOCK))
 				.isInstanceOf(WebSocketClientHandshakeException.class)
 				.hasMessageContaining("401");
 
 		String token = TestJwtSupport.signedJwt("old-path-user", List.of("USER"));
 		assertThatThrownBy(() -> client.execute(URI.create("ws://localhost:" + port + "/api/ws"),
-				allowedHeaders(), protocolHandler(token, session -> Mono.empty())).block(Duration.ofSeconds(5)))
+				allowedHeaders(), protocolHandler(token, session -> Mono.empty())).block(WsTestTimeouts.BLOCK))
 				.isInstanceOf(WebSocketClientHandshakeException.class);
 
 		assertThatThrownBy(() -> client.execute(
 				URI.create("ws://localhost:" + port + "/api/ws/" + UUID.randomUUID() + "/extra"),
-				allowedHeaders(), protocolHandler(token, session -> Mono.empty())).block(Duration.ofSeconds(5)))
+				allowedHeaders(), protocolHandler(token, session -> Mono.empty())).block(WsTestTimeouts.BLOCK))
 				.isInstanceOf(WebSocketClientHandshakeException.class);
 	}
 
@@ -235,7 +243,7 @@ class CollabWebSocketHandlerTest {
 							active -> Flux.fromIterable(outbound).map(active::textMessage), expectedFrames,
 							message -> received.add(message.getPayloadAsText()));
 				}))
-				.block(Duration.ofSeconds(5));
+				.block(WsTestTimeouts.BLOCK);
 
 		return received;
 	}
