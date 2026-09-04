@@ -1,11 +1,23 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from uuid import uuid4
 
 from app.api.routes.documents import router as documents_router
+from app.core.config import Settings
 from app.errors import WorkerError, error_response
 
-app = FastAPI(title="document-worker", docs_url=None, redoc_url=None)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 필수 설정(INTERNAL_API_KEY)이 없으면 기동 자체를 실패시킨다 — 요청 단위로 Settings를
+    # 만들면 기동도 헬스체크도 통과한 뒤 모든 문서 요청이 500이 되어 원인 추적이 어렵다.
+    Settings()
+    yield
+
+
+app = FastAPI(title="document-worker", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.include_router(documents_router)
 
 
