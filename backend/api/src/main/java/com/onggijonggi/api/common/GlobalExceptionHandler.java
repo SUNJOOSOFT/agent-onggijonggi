@@ -41,13 +41,28 @@ public class GlobalExceptionHandler {
 	/**
 	* WebFlux가 라우팅 매칭 실패로 던지는 경우뿐 아니라, ChatController의 세션 소유권 검증처럼
 	* 컨트롤러가 직접 던지는 경우도 여기로 온다(메서드 이름이 시사하는 것보다 넓다).
+	*
+	* 상태코드마다 다른 코드를 주는 것은, 클라이언트가 "다시 시도하면 되는 문제"와 "권한이 없어
+	* 영영 안 되는 문제"를 가려야 하기 때문이다. 409를 CONFLICT가 아니라 참여자 상태 이름으로
+	* 좁혀 두는 것은 지금 그 상태를 던지는 곳이 스레드 참여자 관리(이슈 #20)뿐이라서다 — 다른
+	* 409가 생기면 이 분기를 그때 쪼갠다.
 	*/
 	@ExceptionHandler(ResponseStatusException.class)
-	public ResponseEntity<ErrorResponse> handleNotFound(ResponseStatusException ex, ServerWebExchange exchange) {
+	public ResponseEntity<ErrorResponse> handleStatusException(ResponseStatusException ex,
+			ServerWebExchange exchange) {
 		HttpStatusCode status = ex.getStatusCode();
-		boolean isNotFound = status == HttpStatus.NOT_FOUND;
-		String code = isNotFound ? "NOT_FOUND" : "REQUEST_ERROR";
-		String message = isNotFound ? "요청한 리소스를 찾을 수 없습니다." : "요청을 처리할 수 없습니다.";
+		String code = "REQUEST_ERROR";
+		String message = "요청을 처리할 수 없습니다.";
+		if (status == HttpStatus.NOT_FOUND) {
+			code = "NOT_FOUND";
+			message = "요청한 리소스를 찾을 수 없습니다.";
+		} else if (status == HttpStatus.FORBIDDEN) {
+			code = "FORBIDDEN";
+			message = "이 작업을 수행할 권한이 없습니다.";
+		} else if (status == HttpStatus.CONFLICT) {
+			code = "PARTICIPANT_STATE_CONFLICT";
+			message = "참여자 상태가 바뀌어 요청을 처리할 수 없습니다.";
+		}
 		return ResponseEntity.status(status).body(ErrorResponse.of(code, message, traceId(exchange)));
 	}
 

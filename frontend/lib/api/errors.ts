@@ -12,7 +12,9 @@ export type BffErrorCode =
   | 'UNAUTHENTICATED' // 401 EDGE — Authorization 헤더 없음
   | 'TOKEN_EXPIRED' // 401 EDGE — 만료 토큰
   | 'TOKEN_INVALID' // 401 EDGE — 서명 불일치·형식 오류
-  | 'FORBIDDEN' // 403 EDGE — 인증됐으나 role 불충분
+  | 'FORBIDDEN' // 403 EDGE·CORE — role 불충분, 또는 방의 OWNER가 아님
+  | 'NOT_FOUND' // 404 CORE — 없는 리소스, 또는 존재를 노출하지 않으려 404로 답한 남의 것
+  | 'PARTICIPANT_STATE_CONFLICT' // 409 CORE — 참여자 상태 전제조건 위반(소유권 위임 전 탈퇴 등)
   | 'RATE_LIMITED' // 429 EDGE — 요청 한도 초과
   | 'MODEL_UNAVAILABLE'; // 502 CORE — 게이트웨이가 모델 호출을 거절
 
@@ -31,6 +33,11 @@ const FRIENDLY_BY_CODE: Record<string, string> = {
   TOKEN_EXPIRED: '세션이 만료되었어요. 다시 로그인해 주세요.',
   TOKEN_INVALID: '세션이 만료되었어요. 다시 로그인해 주세요.',
   FORBIDDEN: '이 작업을 수행할 권한이 없어요.',
+  // 없는 것과 남의 것을 구분하지 않는다(존재 비노출) — 문구도 어느 쪽인지 밝히지 않는다.
+  NOT_FOUND: '요청한 항목을 찾을 수 없어요.',
+  // 남이 먼저 바꿔놓은 상태(소유권이 넘어갔거나 이미 나간 사람)라 다시 불러오면 달라진다.
+  PARTICIPANT_STATE_CONFLICT:
+    '참여자 정보가 방금 바뀌었어요. 목록을 새로고침한 뒤 다시 시도해 주세요.',
   RATE_LIMITED: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.',
   // 모델 목록에는 API 키를 채우지 않은 모델도 뜬다 — 어떤 키가 설정됐는지는 게이트웨이만 알기
   // 때문이다. 그래서 고르기 전에 막지 못하고 이 시점에 안내한다.

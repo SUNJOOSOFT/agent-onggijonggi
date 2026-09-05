@@ -1,5 +1,6 @@
 package com.onggijonggi.api.chat;
 
+import com.onggijonggi.common.chat.domain.ThrMbrStatus;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakeException;
 import java.net.URI;
 import java.util.List;
@@ -280,6 +281,43 @@ class CollabWebSocketHandlerTest {
 		assertThat(error.sessionId()).isNull();
 		assertThat(error.code()).isEqualTo("MALFORMED_REQUEST");
 		assertThat(closeStatus.get().getCode()).isEqualTo(1000);
+	}
+
+	/**
+	* 입장 인가는 연결할 때 한 번뿐이라, 연결을 유지한 채 참가자에서 빠진 사람이 계속 말할 수
+	* 있었다(이슈 #20). 두 번 보내고 두 번 다 거부당하는 것으로, 첫 거부가 연결을 닫지 않았다는
+	* 것까지 함께 본다 — 이미 열린 연결로 방송이 계속 가는 것(받기)은 이슈 #135 몫이다.
+	*/
+	@Test
+	void refusesMessagesFromSomeoneRemovedWhileStillConnected() throws Exception {
+		UUID threadId = rooms.openRoom("revoked-ws-owner", "revoked-ws-member");
+		Sinks.Many<String> outbound = Sinks.many().unicast().onBackpressureBuffer();
+		List<String> received = new CopyOnWriteArrayList<>();
+		CountDownLatch ready = new CountDownLatch(1);
+		CountDownLatch refusedTwice = new CountDownLatch(2);
+		CountDownLatch completed = new CountDownLatch(1);
+		AtomicReference<Throwable> failure = new AtomicReference<>();
+
+		Disposable member = openClient("revoked-ws-member", threadId, outbound, received,
+				ready, refusedTwice, completed, failure, 2, frameTypes("error"));
+
+		try {
+			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+			rooms.endParticipation(threadId, "revoked-ws-member", ThrMbrStatus.REVOKED, "OWNER_REVOKED");
+
+			outbound.tryEmitNext("{\"type\":\"chat.message\",\"content\":\"still here?\"}");
+			outbound.tryEmitNext("{\"type\":\"chat.message\",\"content\":\"and again\"}");
+
+			assertThat(refusedTwice.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(failure.get()).isNull();
+
+			ErrorFrame first = (ErrorFrame) objectMapper.readValue(received.get(0), WsFrame.class);
+			assertThat(first.code()).isEqualTo("FORBIDDEN");
+			assertThat(received).hasSize(2);
+		} finally {
+			outbound.tryEmitComplete();
+			member.dispose();
+		}
 	}
 
 	@Test

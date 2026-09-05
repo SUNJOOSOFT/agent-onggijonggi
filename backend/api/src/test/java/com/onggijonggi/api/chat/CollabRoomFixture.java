@@ -4,8 +4,11 @@ import com.onggijonggi.api.auth.UserIdentityService;
 import com.onggijonggi.common.chat.domain.Thr;
 import com.onggijonggi.common.chat.domain.ThrMbr;
 import com.onggijonggi.common.chat.domain.ThrMbrRole;
+import com.onggijonggi.common.chat.domain.ThrMbrStatus;
 import com.onggijonggi.common.chat.persistence.ThrMbrRepository;
 import com.onggijonggi.common.chat.persistence.ThrRepository;
+import java.util.Comparator;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -50,6 +53,36 @@ public class CollabRoomFixture {
 				thrMbrRepository.save(new ThrMbr(thr.getId(), memberId, ThrMbrRole.MEMBER, ownerId));
 			}
 			return thr.getId();
+		}
+
+		/** app_user 행만 만든다 — 초대는 되지만 아직 어느 방에도 없는 사람을 세울 때 쓴다. */
+		public UUID user(String subject) {
+			return userIdentityService.resolveOrProvision(subject).block();
+		}
+
+		/** 참여자 관리 계약의 케이스 대부분이 "끝난 참가"를 전제로 해서, 그 상태를 직접 만들어 준다. */
+		public void endParticipation(UUID threadId, String subject, ThrMbrStatus endStatus, String reason) {
+			ThrMbr member = activeMember(threadId, subject);
+			member.end(endStatus, reason);
+			thrMbrRepository.save(member);
+		}
+
+		public ThrMbrRole roleOf(UUID threadId, String subject) {
+			return activeMember(threadId, subject).getRole();
+		}
+
+		/** 활성 행이 없으면(나갔거나 제거됐으면) 그 마지막 참가 행의 상태를 돌려준다. */
+		public Optional<ThrMbr> lastParticipation(UUID threadId, String subject) {
+			UUID userId = user(subject);
+			return thrMbrRepository.findAll().stream()
+					.filter(member -> member.getThrId().equals(threadId) && member.getUserId().equals(userId))
+					.max(Comparator.comparing(ThrMbr::getCreatedAt));
+		}
+
+		private ThrMbr activeMember(UUID threadId, String subject) {
+			UUID userId = user(subject);
+			return thrMbrRepository.findByThrIdAndUserIdAndStatus(threadId, userId, ThrMbrStatus.ACTIVE)
+					.orElseThrow(() -> new IllegalStateException("활성 참가자가 아닙니다: " + subject));
 		}
 
 	}
